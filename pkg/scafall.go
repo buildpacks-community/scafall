@@ -1,0 +1,69 @@
+// Scafall creates new source projects from project templates.  Project
+// templates are stored in git repositories and new source projects are created
+// on your local filesystem.
+package scafall
+
+// Scafall allows programmatic control over the default values for variables.
+// Any provided Arguments cause prompts for the same variable name to be skipped.
+type Scafall struct {
+	URL          string
+	Arguments    map[string]string
+	OutputFolder string
+	SubPath      string
+	CloneCache   string
+}
+
+type Option func(*Scafall)
+
+// Set the output folder in which to create scaffold a template.
+func WithOutputFolder(folder string) Option {
+	return func(s *Scafall) {
+		s.OutputFolder = folder
+	}
+}
+
+// Set values for each variable as key-value pairs.
+func WithArguments(arguments map[string]string) Option {
+	return func(s *Scafall) {
+		s.Arguments = arguments
+	}
+}
+
+// Use a sub folder within the template repository as the source for a template.
+func WithSubPath(subPath string) Option {
+	return func(s *Scafall) {
+		s.SubPath = subPath
+	}
+}
+
+// Create a new Scafall with the given options.
+func NewScafall(url string, opts ...Option) (Scafall, error) {
+	var (
+		defaultArguments    = map[string]string{}
+		defaultOutputFolder = "."
+	)
+
+	s := Scafall{
+		URL:          url,
+		Arguments:    defaultArguments,
+		OutputFolder: defaultOutputFolder,
+	}
+
+	for _, opt := range opts {
+		opt(&s)
+	}
+
+	return s, nil
+}
+
+// Scaffold accepts url containing project templates and creates an output
+// project.  The url can either point to a project template or a collection of
+// project templates.
+func (s Scafall) Scaffold() error {
+	return nil
+}
+
+// TemplateArguments returns a list of variable names that can be passed to the template
+func (s Scafall) TemplateArguments() (string, []string, error) {
+	return "arguments offered by template", []string{}, nil
+}
