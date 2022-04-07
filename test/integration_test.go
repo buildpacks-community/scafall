@@ -33,6 +33,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		{"Test no prompt file", []string{"testdata", "empty"}, map[string]interface{}{}, []string{}},
 		{"Test empty prompt file", []string{"testdata", "noprompts"}, map[string]interface{}{}, []string{}},
 		{"Test string prompts", []string{"testdata", "str_prompts"}, map[string]interface{}{}, []string{"test"}},
+		{"Test required prompts", []string{"testdata", "requireprompts"}, map[string]interface{}{}, []string{"test"}},
 	}
 
 	for _, testCase := range testCases {

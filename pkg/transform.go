@@ -40,14 +40,31 @@ type Prompts struct {
 	Prompts []Prompt `toml:"prompt"`
 }
 
+func requireNonEmptyString(s string) error {
+	if s == "" {
+		return errors.New("please provide a non-empty value")
+	}
+	return nil
+}
+
+func requireId(s string) error {
+	return nil
+}
+
 func askPrompts(stdin io.ReadCloser, prompts *Prompts, vars map[string]interface{}) error {
 	for _, prompt := range prompts.Prompts {
 		var result string
 		var err error
+
 		if prompt.Choices == nil {
+			var validateFunc promptui.ValidateFunc = requireId
+			if prompt.Required {
+				validateFunc = requireNonEmptyString
+			}
 			p := promptui.Prompt{
-				Label:   prompt.Prompt,
-				Default: prompt.Default,
+				Label:    prompt.Prompt,
+				Default:  prompt.Default,
+				Validate: validateFunc,
 
 				Stdin: stdin,
 			}
