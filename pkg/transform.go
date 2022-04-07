@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
@@ -37,10 +38,6 @@ type Prompt struct {
 
 type Prompts struct {
 	Prompts []Prompt `toml:"prompt"`
-}
-
-type Runner interface {
-	Run() (string, error)
 }
 
 func askPrompts(stdin io.ReadCloser, prompts *Prompts, vars map[string]interface{}) error {
@@ -247,7 +244,7 @@ func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
 
 func transform(env *map[string]interface{}, data string) ([]byte, error) {
 	var output bytes.Buffer
-	tpl, err := template.New("bp").Parse(data)
+	tpl, err := template.New("bp").Funcs(sprig.FuncMap()).Parse(data)
 	if err != nil {
 		return nil, errors.New("cannot parse file template")
 	}

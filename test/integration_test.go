@@ -97,6 +97,8 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			templateFile := filepath.Join(outputProject, "quack", "quack.go")
 			_, err := os.Stat(templateFile)
 			h.AssertNil(t, err)
+			data, _ := ioutil.ReadFile(templateFile)
+			h.AssertContains(t, string(data), "QUACK")
 
 			os.Chdir(pwd)
 		})

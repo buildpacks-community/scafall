@@ -25,4 +25,5 @@ test-unit: $(GO_ACC)
 	go-acc ./... -o $(CODE_COVERAGE_FILE_TXT)
 
 test-integration:
+	go clean -testcache ./test/
 	go test ./test/
