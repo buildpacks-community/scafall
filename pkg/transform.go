@@ -173,7 +173,7 @@ func apply(bfs billy.Filesystem, vars map[string]interface{}) (billy.Filesystem,
 				return fmt.Errorf("failed to subsitute variables in %s", tpath)
 			}
 			// Create file from embedded.
-			if fileInfo, err := outFs.Create(tpath); err == nil {
+			if fileInfo, err := outFs.OpenFile(tpath, os.O_CREATE|os.O_RDWR, info.Mode()); err == nil {
 				defer fileInfo.Close()
 				if _, err := fileInfo.Write(transformed); err != nil {
 					return err
@@ -202,7 +202,7 @@ func copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
 		// Checking, if embedded file is not a folder.
 		if !info.IsDir() {
 			// create a copy
-			outFile, errCreateFile := outFs.Create(path)
+			outFile, errCreateFile := outFs.OpenFile(path, os.O_CREATE|os.O_RDWR, info.Mode())
 			if errCreateFile != nil {
 				return fmt.Errorf("failed to create file: %s %s", path, err)
 			}
