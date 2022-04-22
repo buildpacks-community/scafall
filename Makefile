@@ -9,7 +9,7 @@ all: build test
 build:
 	go build -o scafall main.go
 
-test: test-clean test-unit test-integration
+test: test-clean test-unit test-integration test-system
 
 test-clean:
 	@echo "	cleaning test cache"
@@ -17,13 +17,15 @@ test-clean:
 
 $(GO_ACC):
 	@echo "	installing testing tools"
-	go install -v github.com/ory/go-acc@latest
+	which go-acc || go install -v github.com/ory/go-acc@latest
 	$(eval export PATH=$(GO_ACC):$(PATH))
 
-test-unit: $(GO_ACC)
+test-unit: $(GO_ACC) test-clean
 	@echo "	running unit tests"
-	go-acc ./... -o $(CODE_COVERAGE_FILE_TXT)
+	go-acc ./pkg/... -o $(CODE_COVERAGE_FILE_TXT)
 
-test-integration:
-	go clean -testcache ./test/
-	go test ./test/
+test-integration: test-clean
+	go test ./test_integration/
+
+test-system: test-clean
+	go test ./test_system/

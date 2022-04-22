@@ -12,9 +12,11 @@ var (
 		Long:  `Scafall creates new project from project templates.`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			url := args[0]
+			outputDir := args[1]
 			vars := map[string]interface{}{}
 			s := scafall.New(vars, []string{})
-			return s.Scaffold(args[0], args[1])
+			return s.Scaffold(url, outputDir)
 		},
 	}
 )

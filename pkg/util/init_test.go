@@ -1,4 +1,4 @@
-package scafall_test
+package util_test
 
 import (
 	"testing"
@@ -7,6 +7,6 @@ import (
 	"github.com/sclevine/spec/report"
 )
 
-func TestScafall(t *testing.T) {
+func TestUtil(t *testing.T) {
 	spec.Run(t, "Walk", testWalk, spec.Report(report.Terminal{}))
 }

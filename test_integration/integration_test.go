@@ -1,26 +1,16 @@
 package scafall_integration_test
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	scafall "github.com/AidanDelaney/scafall/pkg"
 	h "github.com/buildpacks/pack/testhelpers"
 	"github.com/sclevine/spec"
 )
-
-type ClosingBuffer struct {
-	*bytes.Buffer
-}
-
-func (ClosingBuffer) Close() error {
-	return nil
-}
 
 func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	type TestCase struct {
@@ -42,14 +32,10 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		when(currentCase.title, func() {
 			var (
 				outputDir string
-				mrc       ClosingBuffer
 			)
 
 			it.Before(func() {
 				outputDir, _ = ioutil.TempDir("", "test")
-				prompts := fmt.Sprintf("%s\n", strings.Join(currentCase.promptAnswers, "\n"))
-				mrc = ClosingBuffer{
-					bytes.NewBufferString(prompts)}
 			})
 
 			it("creates a template file", func() {
@@ -59,8 +45,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 					panic(fmt.Errorf("cannot open input template %s", inputTemplate))
 				}
 
-				s := scafall.Scafall{Variables: currentCase.vars, Reserved: []string{}, Stdin: mrc}
-				s.Scaffold(inputTemplate, outputProject)
+				s := scafall.Scafall{Variables: currentCase.vars, Reserved: []string{}}
+				sErr := s.Scaffold(inputTemplate, outputProject)
+				h.AssertNil(t, sErr)
 
 				templateFile := filepath.Join(outputProject, "template.go")
 				_, err := os.Stat(templateFile)
@@ -89,7 +76,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 		it("renames a templated folder and file", func() {
 			pwd, _ := os.Getwd()
-			os.Chdir(outputDir)
 			outputProject := filepath.Join(outputDir, "test")
 
 			s := scafall.New(map[string]interface{}{"duck": "quack"}, []string{})
@@ -100,8 +86,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			h.AssertNil(t, err)
 			data, _ := ioutil.ReadFile(templateFile)
 			h.AssertContains(t, string(data), "QUACK")
-
-			os.Chdir(pwd)
 		})
 
 		it.After(func() {
@@ -111,5 +95,28 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("An invalid template is passed", func() {
 
+	})
+
+	when("A collection is requested", func() {
+		it("Allows a choice to be made", func() {
+			pwd, _ := os.Getwd()
+			collection := filepath.Join(pwd, "testdata/collection")
+			s := scafall.Scafall{
+				Variables: map[string]interface{}{},
+				Reserved:  []string{},
+			}
+
+			outputDir, _ := ioutil.TempDir("", "test")
+			outputProject := filepath.Join(outputDir, "test")
+			err := s.ScaffoldCollection(collection, "Choose your option", outputProject)
+			h.AssertNil(t, err)
+
+			templateFile := filepath.Join(outputProject, "template.go")
+			_, err = os.Stat(templateFile)
+			h.AssertNil(t, err)
+			data, _ := ioutil.ReadFile(templateFile)
+
+			h.AssertContains(t, string(data), "test")
+		})
 	})
 }

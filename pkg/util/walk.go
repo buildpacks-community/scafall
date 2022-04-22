@@ -1,4 +1,4 @@
-package scafall
+package util
 
 import (
 	"os"

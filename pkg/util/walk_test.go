@@ -1,4 +1,4 @@
-package scafall_test
+package util_test
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/sclevine/spec"
 	"golang.org/x/sys/unix"
 
-	scafall "github.com/AidanDelaney/scafall/pkg"
+	u "github.com/AidanDelaney/scafall/pkg/util"
 )
 
 func testWalk(t *testing.T, when spec.G, it spec.S) {
@@ -35,7 +35,7 @@ func testWalk(t *testing.T, when spec.G, it spec.S) {
 	when("A directory tree is walked", func() {
 		it("finds all files and directories", func() {
 			var found []string = []string{}
-			scafall.Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
+			u.Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
 				found = append(found, path)
 				return nil
 			})
@@ -44,7 +44,7 @@ func testWalk(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("finds executable file permissions", func() {
-			scafall.Walk(bfs, "/executable", func(path string, info fs.FileInfo, err error) error {
+			u.Walk(bfs, "/executable", func(path string, info fs.FileInfo, err error) error {
 				if err := unix.Access(path, unix.X_OK); err == nil {
 					return nil
 				}

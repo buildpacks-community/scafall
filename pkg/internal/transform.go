@@ -1,4 +1,4 @@
-package scafall
+package internal
 
 import (
 	"bytes"
@@ -11,26 +11,28 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AidanDelaney/scafall/pkg/util"
+
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/manifoldco/promptui"
 )
 
 const (
-	PromptFile string = "prompts.toml"
+	PromptFile   string = "prompts.toml"
+	OverrideFile string = ".override.toml"
 )
 
 var (
 	ReservedPromptVariables = []string{}
-	IgnoredNames            = []string{"/" + PromptFile, "/.git"}
+	IgnoredNames            = []string{"/" + PromptFile, "/" + OverrideFile, "/.git"}
 )
 
 type Prompt struct {
-	Name     string   `toml:"name,required"`
-	Prompt   string   `toml:"prompt,required"`
+	Name     string   `toml:"name" binding:"required"`
+	Prompt   string   `toml:"prompt" binding:"required"`
 	Required bool     `toml:"required"`
 	Default  string   `toml:"default"`
 	Choices  []string `toml:"choices,omitempty"`
@@ -51,12 +53,17 @@ func requireId(s string) error {
 	return nil
 }
 
-func askPrompts(stdin io.ReadCloser, prompts *Prompts, vars map[string]interface{}) error {
+func AskPrompts(prompts *Prompts, vars map[string]interface{}, overrides map[string]string) error {
 	for _, prompt := range prompts.Prompts {
+		if overide, exists := overrides[prompt.Name]; exists {
+			vars[prompt.Name] = overide
+			continue
+		}
+
 		var result string
 		var err error
 
-		if prompt.Choices == nil {
+		if prompt.Choices == nil || len(prompt.Choices) == 0 {
 			var validateFunc promptui.ValidateFunc = requireId
 			if prompt.Required {
 				validateFunc = requireNonEmptyString
@@ -65,16 +72,12 @@ func askPrompts(stdin io.ReadCloser, prompts *Prompts, vars map[string]interface
 				Label:    prompt.Prompt,
 				Default:  prompt.Default,
 				Validate: validateFunc,
-
-				Stdin: stdin,
 			}
 			result, err = p.Run()
 		} else {
 			p := promptui.Select{
 				Label: prompt.Prompt,
 				Items: prompt.Choices,
-
-				Stdin: stdin,
 			}
 			_, result, err = p.Run()
 		}
@@ -85,7 +88,7 @@ func askPrompts(stdin io.ReadCloser, prompts *Prompts, vars map[string]interface
 	return nil
 }
 
-func readFile(bfs billy.Filesystem, name string) (string, error) {
+func ReadFile(bfs billy.Filesystem, name string) (string, error) {
 	file, err := bfs.Open(name)
 	if err != nil {
 		return "", fmt.Errorf("cannot open file %s", name)
@@ -99,33 +102,53 @@ func readFile(bfs billy.Filesystem, name string) (string, error) {
 	return string(buf), nil
 }
 
-func contains(strings []string, element string) bool {
-	for _, s := range strings {
-		if s == element {
-			return true
-		}
-	}
-	return false
-}
-
-func readPromptFile(bfs billy.Filesystem, name string) (*Prompts, error) {
-	promptData, err := readFile(bfs, PromptFile)
+func ReadPromptFile(bfs billy.Filesystem, name string) (*Prompts, error) {
+	promptData, err := ReadFile(bfs, name)
 	if err != nil {
 		return nil, err
 	}
 
 	prompts := Prompts{}
 	if _, err := toml.Decode(promptData, &prompts); err != nil {
-		return nil, fmt.Errorf("%s file does not match required format: %s", PromptFile, err)
+		return nil, fmt.Errorf("%s file does not match required format: %s", name, err)
 	}
 
 	for _, prompt := range prompts.Prompts {
-		if contains(ReservedPromptVariables, prompt.Name) {
-			return nil, fmt.Errorf("%s file contains reserved variable: %s", PromptFile, prompt.Name)
+		if util.Contains(ReservedPromptVariables, prompt.Name) {
+			return nil, fmt.Errorf("%s file contains reserved variable: %s", name, prompt.Name)
+		}
+
+		if prompt.Name == "" || prompt.Prompt == "" {
+			return nil, fmt.Errorf("%s file contains prompt with missing name or prompt required field", name)
 		}
 	}
 
 	return &prompts, nil
+}
+
+func ReadOverrides(bfs billy.Filesystem, name string) (map[string]string, error) {
+	overrides := map[string]string{}
+	// if no override file
+	if _, err := bfs.Stat(name); err != nil {
+		return overrides, nil
+	}
+
+	overrideData, err := ReadFile(bfs, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := toml.Decode(overrideData, &overrides); err != nil {
+		return nil, fmt.Errorf("%s file does not match required format: %s", name, err)
+	}
+
+	for k, _ := range overrides {
+		if util.Contains(ReservedPromptVariables, k) {
+			return nil, fmt.Errorf("%s file contains reserved variable: %s", name, k)
+		}
+	}
+
+	return overrides, nil
 }
 
 func isPrefixOf(path string, prefixes []string) bool {
@@ -137,10 +160,10 @@ func isPrefixOf(path string, prefixes []string) bool {
 	return false
 }
 
-func apply(bfs billy.Filesystem, vars map[string]interface{}) (billy.Filesystem, error) {
+func Apply(bfs billy.Filesystem, vars map[string]interface{}) (billy.Filesystem, error) {
 	outFs := memfs.New()
 
-	err := Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
+	err := util.Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
 		// Do not write the prompt file to the output project
 		if isPrefixOf(path, IgnoredNames) {
 			return nil
@@ -163,7 +186,7 @@ func apply(bfs billy.Filesystem, vars map[string]interface{}) (billy.Filesystem,
 		// Checking, if embedded file is not a folder.
 		if !info.IsDir() {
 			// Set file data.
-			fileData, errReadFile := readFile(bfs, path)
+			fileData, errReadFile := ReadFile(bfs, path)
 			if errReadFile != nil {
 				return errReadFile
 			}
@@ -189,8 +212,8 @@ func apply(bfs billy.Filesystem, vars map[string]interface{}) (billy.Filesystem,
 	return outFs, err
 }
 
-func copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
-	err := Walk(inFs, "/", func(path string, info fs.FileInfo, err error) error {
+func Copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
+	err := util.Walk(inFs, "/", func(path string, info fs.FileInfo, err error) error {
 		// Checking, if embedded file is a folder.
 		if info.IsDir() {
 			// Create folders structure from embedded.
@@ -223,40 +246,6 @@ func copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
 		return nil
 	})
 	return err
-}
-
-func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
-	// don't clobber any existing files
-	if _, ok := os.Stat(targetDir); ok == nil {
-		return fmt.Errorf("directory %s already exists", targetDir)
-	}
-
-	var transformedFs = bfs
-
-	if _, err := bfs.Stat(PromptFile); err == nil {
-		prompts, err := readPromptFile(bfs, PromptFile)
-		if err != nil {
-			return err
-		}
-		err = askPrompts(s.Stdin, prompts, s.Variables)
-		if err != nil {
-			return err
-		}
-	}
-
-	transformedFs, err := apply(bfs, s.Variables)
-	if err != nil {
-		return err
-	}
-
-	os.MkdirAll(targetDir, 0755)
-	outFs := osfs.New(targetDir)
-	err = copy(transformedFs, outFs)
-	if err != nil {
-		return fmt.Errorf("failed to load new project skeleton: %s", err)
-	}
-
-	return nil
 }
 
 func transform(env *map[string]interface{}, data string) ([]byte, error) {
