@@ -34,11 +34,10 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("scaffolds a project", func() {
-			vars := map[string]interface{}{}
 			pwd, _ := os.Getwd()
 			url := filepath.Join(pwd, testFolder)
 
-			s := scafall.New(vars, []string{})
+			s := scafall.Scafall{}
 			err := s.Scaffold(url, outputDir)
 			h.AssertNil(t, err)
 
@@ -74,11 +73,10 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("scaffolds a collection", func() {
-			vars := map[string]interface{}{}
 			pwd, _ := os.Getwd()
 			url := filepath.Join(pwd, testFolder)
 
-			s := scafall.New(vars, []string{})
+			s := scafall.Scafall{}
 			err := s.Scaffold(url, outputDir)
 			h.AssertNil(t, err)
 

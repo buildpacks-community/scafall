@@ -16,7 +16,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	type TestCase struct {
 		title         string
 		folder        []string
-		vars          map[string]interface{}
+		defaults      map[string]interface{}
 		promptAnswers []string
 	}
 	testCases := []TestCase{
@@ -45,7 +45,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 					panic(fmt.Errorf("cannot open input template %s", inputTemplate))
 				}
 
-				s := scafall.Scafall{Variables: currentCase.vars, Reserved: []string{}}
+				s := scafall.Scafall{DefaultValues: currentCase.defaults}
 				sErr := s.Scaffold(inputTemplate, outputProject)
 				h.AssertNil(t, sErr)
 
@@ -78,7 +78,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			pwd, _ := os.Getwd()
 			outputProject := filepath.Join(outputDir, "test")
 
-			s := scafall.New(map[string]interface{}{"duck": "quack"}, []string{})
+			s := scafall.Scafall{Overrides: map[string]string{"duck": "quack", "crow": "caw"}}
 			s.Scaffold(filepath.Join(pwd, "testdata/template_folder"), outputProject)
 
 			templateFile := filepath.Join(outputProject, "quack", "quack.go")
@@ -86,6 +86,12 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			h.AssertNil(t, err)
 			data, _ := ioutil.ReadFile(templateFile)
 			h.AssertContains(t, string(data), "QUACK")
+
+			templateBinary := filepath.Join(outputProject, "quack", "quack.jpg")
+			fi, err := os.Stat(templateBinary)
+			h.AssertNil(t, err)
+			h.AssertNotEq(t, 0, fi)
+
 		})
 
 		it.After(func() {
@@ -101,10 +107,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		it("Allows a choice to be made", func() {
 			pwd, _ := os.Getwd()
 			collection := filepath.Join(pwd, "testdata/collection")
-			s := scafall.Scafall{
-				Variables: map[string]interface{}{},
-				Reserved:  []string{},
-			}
+			s := scafall.Scafall{}
 
 			outputDir, _ := ioutil.TempDir("", "test")
 			outputProject := filepath.Join(outputDir, "test")

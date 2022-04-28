@@ -14,8 +14,9 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := args[0]
 			outputDir := args[1]
+			overrides := map[string]string{}
 			vars := map[string]interface{}{}
-			s := scafall.New(vars, []string{})
+			s := scafall.New(overrides, vars)
 			return s.Scaffold(url, outputDir)
 		},
 	}

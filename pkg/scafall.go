@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/AidanDelaney/scafall/pkg/internal"
+	"github.com/imdario/mergo"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -17,20 +18,20 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-// Scafall allows programmatic control over pre-populated Variables and control
-// over the variables that are allowed to be prompted.  Reserverd variables are
-// skipped in prompts.
+// Scafall allows programmatic control over the default values for variables
+// Overrides are skipped in prompts but can be locally overridden in a
+// `.override.toml` file.
 type Scafall struct {
-	Variables map[string]interface{}
-	Reserved  []string
+	Overrides     map[string]string
+	DefaultValues map[string]interface{}
 }
 
 // Create a New Scafall with the given pre-populated Variables and reserved
 // variables
-func New(vars map[string]interface{}, reservedPromptValues []string) Scafall {
+func New(overrides map[string]string, vars map[string]interface{}) Scafall {
 	return Scafall{
-		Variables: vars,
-		Reserved:  reservedPromptValues,
+		Overrides:     overrides,
+		DefaultValues: vars,
 	}
 }
 
@@ -108,12 +109,18 @@ func collection(s Scafall, inFs billy.Filesystem, outputDir string, prompt strin
 	if err != nil {
 		return err
 	}
+	mergedOverrides := make(map[string]string)
+	mergo.Merge(&mergedOverrides, s.Overrides)
+	mergo.Merge(&mergedOverrides, overrides)
 
-	internal.AskPrompts(&prompts, vars, overrides)
-	if _, exists := vars[varName]; !exists {
+	values, err := internal.AskPrompts(&prompts, mergedOverrides, vars, os.Stdin)
+	if err != nil {
+		return err
+	}
+	if _, exists := values[varName]; !exists {
 		return fmt.Errorf("can not process the chosen element of collection: '%s'", varName)
 	}
-	choice := vars[varName].(string)
+	choice := values[varName]
 	inFs, err = inFs.Chroot(choice)
 	if err != nil {
 		return nil
@@ -152,34 +159,34 @@ func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
 		return fmt.Errorf("directory %s already exists", targetDir)
 	}
 
-	var transformedFs = bfs
+	var values map[string]string
 
+	// Create prompts and merge any overrides
 	if _, err := bfs.Stat(internal.PromptFile); err == nil {
 		prompts, err := internal.ReadPromptFile(bfs, internal.PromptFile)
 		if err != nil {
 			return err
 		}
-		overides := map[string]string{}
+		overrides := map[string]string{}
 		if _, err := bfs.Stat(internal.OverrideFile); err == nil {
-			overides, err = internal.ReadOverrides(bfs, internal.OverrideFile)
+			overrides, err = internal.ReadOverrides(bfs, internal.OverrideFile)
 			if err != nil {
 				return err
 			}
 		}
-		err = internal.AskPrompts(prompts, s.Variables, overides)
+		mergedOverrides := make(map[string]string)
+		mergo.Merge(&mergedOverrides, s.Overrides)
+		mergo.Merge(&mergedOverrides, overrides)
+		values, err = internal.AskPrompts(prompts, mergedOverrides, s.DefaultValues, os.Stdin)
 		if err != nil {
 			return err
 		}
-	}
-
-	transformedFs, err := internal.Apply(bfs, s.Variables)
-	if err != nil {
-		return err
+		mergo.Merge(&values, mergedOverrides)
 	}
 
 	os.MkdirAll(targetDir, 0755)
 	outFs := osfs.New(targetDir)
-	err = internal.Copy(transformedFs, outFs)
+	err := internal.Apply(bfs, values, outFs)
 	if err != nil {
 		return fmt.Errorf("failed to load new project skeleton: %s", err)
 	}

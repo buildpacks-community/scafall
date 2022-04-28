@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/AidanDelaney/scafall/pkg/internal"
@@ -8,6 +9,66 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sclevine/spec"
 )
+
+type ClosingBuffer struct {
+	*bytes.Buffer
+}
+
+func (ClosingBuffer) Close() error {
+	return nil
+}
+
+func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
+	type TestCase struct {
+		prompts   []internal.Prompt
+		text      string
+		expected  map[string]string
+		overrides map[string]string
+		defaults  map[string]interface{}
+	}
+	prompt := internal.Prompt{
+		Name:   "Duck",
+		Prompt: "Make noise",
+	}
+	selection := internal.Prompt{
+		Name:    "Duck",
+		Choices: []string{"moo", "quack", "baa"},
+	}
+
+	duckQuack := map[string]string{"Duck": "quack"}
+	testCases := []TestCase{
+		{prompts: []internal.Prompt{prompt}, text: "\n", expected: map[string]string{"Duck": ""}},
+		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack},
+		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack, overrides: duckQuack},
+		// \x0d is Enter
+		{prompts: []internal.Prompt{prompt}, text: "\x0d", expected: duckQuack, overrides: map[string]string{}, defaults: map[string]interface{}{"Duck": "quack"}},
+		// \x1b\x5b\x42 is the terminal escape sequence for down arrow
+		{prompts: []internal.Prompt{selection}, text: "\x0d", expected: map[string]string{"Duck": "moo"}},
+		{prompts: []internal.Prompt{selection}, text: "\x1b\x5b\x42\x0d", expected: duckQuack},
+		{prompts: []internal.Prompt{selection}, text: "\x0d", expected: map[string]string{"Duck": "moo"}},
+		{prompts: []internal.Prompt{selection}, text: "\x1b\x5b\x42\x0d", expected: duckQuack, overrides: duckQuack},
+	}
+
+	for _, test := range testCases {
+		currentCase := test
+		when("When the user is prompted", func() {
+			var (
+				input ClosingBuffer
+			)
+
+			it.Before(func() {
+				input = ClosingBuffer{bytes.NewBufferString(currentCase.text)}
+			})
+
+			it("produces valid prompt values", func() {
+				prompts := internal.Prompts{currentCase.prompts}
+				values, err := internal.AskPrompts(&prompts, currentCase.overrides, currentCase.defaults, input)
+				h.AssertNil(t, err)
+				h.AssertEq(t, values, currentCase.expected)
+			})
+		})
+	}
+}
 
 func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 	when("Reading a prompt file", func() {
@@ -57,11 +118,12 @@ func testApply(t *testing.T, when spec.G, it spec.S) {
 			h.AssertNil(t, err)
 			f.Write([]byte("{{.Foo}}"))
 			f.Close()
-			vars := map[string]interface{}{
+			vars := map[string]string{
 				"Foo": "Bar",
 			}
 
-			outFs, err := internal.Apply(bfs, vars)
+			outFs := memfs.New()
+			err = internal.Apply(bfs, vars, outFs)
 			h.AssertNil(t, err)
 
 			bar, err := outFs.Open("/Bar/Bar/Bar.txt")

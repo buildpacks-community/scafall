@@ -25,3 +25,15 @@ In a project template we can create a directory such as `pkg/{{.PackageName}}`. 
 There is often a need to read a variale from a user prompt and apply some processing to it.  For example we may need to read a `PackageName` from the user and ensure that it contains no spaces or `-` characters.  Scafall supports all [sprig](http://masterminds.github.io/sprig/) functions that can be used for such processing.
 
 The expression `{{.PackageName | snakecase}}` removes spaces from `PackageName` and replaces all occurances of hyphen with underscore.  The expression `{{.PackageName | snakecase}}` is a valid filename and directory path.  It can also be used internally in text files.
+
+## Use `scafall` Behind a Proxy
+
+Export both `HTTP_PROXY` and `HTTPS_PROXY` environment variables and these will be used by `scafall`.
+
+## What is an `Override`
+
+An override is a constant value provided to the scaffolding engine via the `scafall` API.
+
+## What is `DefaultValues`
+
+A `DefaultValue` is a default prompt value provided to the scaffolding engine via the `scafall` API.

@@ -7,16 +7,15 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/AidanDelaney/scafall/pkg/util"
+	"github.com/gabriel-vasile/mimetype"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/manifoldco/promptui"
 )
 
@@ -53,10 +52,50 @@ func requireId(s string) error {
 	return nil
 }
 
-func AskPrompts(prompts *Prompts, vars map[string]interface{}, overrides map[string]string) error {
+func PreparePrompt(prompt *Prompt, defaults map[string]interface{}, input io.ReadCloser) (*promptui.Prompt, error) {
+	var validateFunc promptui.ValidateFunc = requireId
+	var defaultValue = prompt.Default
+	if k, exists := defaults[prompt.Name]; exists {
+		var ok bool
+		defaultValue, ok = k.(string)
+		if !ok {
+			return nil, fmt.Errorf("prompt for %s contains invalid string %v", prompt.Name, prompt.Default)
+		}
+	}
+	if prompt.Required {
+		validateFunc = requireNonEmptyString
+	}
+	p := promptui.Prompt{
+		Label:    prompt.Prompt,
+		Default:  defaultValue,
+		Validate: validateFunc,
+		Stdin:    input,
+	}
+	return &p, nil
+}
+
+func PrepareChoices(prompt *Prompt, defaults map[string]interface{}, input io.ReadCloser) (*promptui.Select, error) {
+	var choices = prompt.Choices
+	if k, exists := defaults[prompt.Name]; exists {
+		var ok bool
+		choices, ok = k.([]string)
+		if !ok {
+			return nil, fmt.Errorf("prompt for %s contains invalid []string %v", prompt.Name, prompt.Default)
+		}
+	}
+	p := promptui.Select{
+		Label: prompt.Prompt,
+		Items: choices,
+		Stdin: input,
+	}
+	return &p, nil
+}
+
+func AskPrompts(prompts *Prompts, overrides map[string]string, defaults map[string]interface{}, input io.ReadCloser) (map[string]string, error) {
+	values := map[string]string{}
 	for _, prompt := range prompts.Prompts {
-		if overide, exists := overrides[prompt.Name]; exists {
-			vars[prompt.Name] = overide
+		if o, exists := overrides[prompt.Name]; exists {
+			values[prompt.Name] = o
 			continue
 		}
 
@@ -64,28 +103,23 @@ func AskPrompts(prompts *Prompts, vars map[string]interface{}, overrides map[str
 		var err error
 
 		if prompt.Choices == nil || len(prompt.Choices) == 0 {
-			var validateFunc promptui.ValidateFunc = requireId
-			if prompt.Required {
-				validateFunc = requireNonEmptyString
-			}
-			p := promptui.Prompt{
-				Label:    prompt.Prompt,
-				Default:  prompt.Default,
-				Validate: validateFunc,
+			p, prepErr := PreparePrompt(&prompt, defaults, input)
+			if prepErr != nil {
+				return nil, prepErr
 			}
 			result, err = p.Run()
 		} else {
-			p := promptui.Select{
-				Label: prompt.Prompt,
-				Items: prompt.Choices,
+			p, prepErr := PrepareChoices(&prompt, defaults, input)
+			if prepErr != nil {
+				return nil, prepErr
 			}
 			_, result, err = p.Run()
 		}
 		if err == nil {
-			vars[prompt.Name] = result
+			values[prompt.Name] = result
 		}
 	}
-	return nil
+	return values, nil
 }
 
 func ReadFile(bfs billy.Filesystem, name string) (string, error) {
@@ -160,95 +194,93 @@ func isPrefixOf(path string, prefixes []string) bool {
 	return false
 }
 
-func Apply(bfs billy.Filesystem, vars map[string]interface{}) (billy.Filesystem, error) {
-	outFs := memfs.New()
-
+func Apply(bfs billy.Filesystem, vars map[string]string, outFs billy.Filesystem) error {
 	err := util.Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
 		// Do not write the prompt file to the output project
 		if isPrefixOf(path, IgnoredNames) {
 			return nil
 		}
 
-		t, terr := transform(&vars, path)
-		if terr != nil {
-			return nil
+		tpath := path
+		if t, terr := transform(&vars, path); terr == nil {
+			tpath = string(t)
 		}
-		tpath := string(t)
 
-		// Checking, if embedded file is a folder.
 		if info.IsDir() {
-			// Create folders structure from embedded.
 			if err := outFs.MkdirAll(tpath, 0755); err != nil {
 				return err
 			}
 		}
 
-		// Checking, if embedded file is not a folder.
 		if !info.IsDir() {
-			// Set file data.
-			fileData, errReadFile := ReadFile(bfs, path)
-			if errReadFile != nil {
-				return errReadFile
+			if !isTextfile(bfs, path) {
+				return copyBinaryFile(bfs, path, info, outFs, tpath)
 			}
 
-			transformed, tfErr := transform(&vars, fileData)
-			if tfErr != nil {
-				return fmt.Errorf("failed to subsitute variables in %s", tpath)
-			}
-			// Create file from embedded.
-			if fileInfo, err := outFs.OpenFile(tpath, os.O_CREATE|os.O_RDWR, info.Mode()); err == nil {
-				defer fileInfo.Close()
-				if _, err := fileInfo.Write(transformed); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
+			return copyTextFile(bfs, path, info, vars, outFs, tpath)
 		}
 
 		return nil
 	})
 
-	return outFs, err
-}
-
-func Copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
-	err := util.Walk(inFs, "/", func(path string, info fs.FileInfo, err error) error {
-		// Checking, if embedded file is a folder.
-		if info.IsDir() {
-			// Create folders structure from embedded.
-			if err := outFs.MkdirAll(path, 0755); err != nil {
-				return err
-			}
-		}
-
-		// Checking, if embedded file is not a folder.
-		if !info.IsDir() {
-			// create a copy
-			outFile, errCreateFile := outFs.OpenFile(path, os.O_CREATE|os.O_RDWR, info.Mode())
-			if errCreateFile != nil {
-				return fmt.Errorf("failed to create file: %s %s", path, err)
-			}
-			defer outFile.Close()
-
-			inFile, errOpen := inFs.Open(path)
-			if errOpen != nil {
-				return fmt.Errorf("failed to copy file: %s %s", path, err)
-			}
-			defer inFile.Close()
-
-			if n, errCopy := io.Copy(outFile, inFile); errCopy != nil {
-				return fmt.Errorf("failed to write data to file: %s %v (%d bytes)", path, err, n)
-			}
-			log.Default().Printf("    %s  %s", "create", path)
-		}
-
-		return nil
-	})
 	return err
 }
 
-func transform(env *map[string]interface{}, data string) ([]byte, error) {
+func isTextfile(bfs billy.Filesystem, path string) bool {
+	fd, err := bfs.Open(path)
+	if err != nil {
+		return false
+	}
+	mtype, err := mimetype.DetectReader(fd)
+	if err != nil {
+		return false
+	}
+
+	if strings.HasPrefix(mtype.String(), "text") {
+		return true
+	}
+
+	return false
+}
+
+func copyBinaryFile(bfs billy.Filesystem, path string, info fs.FileInfo, dst billy.Filesystem, dstPath string) error {
+	outFile, err := dst.OpenFile(dstPath, os.O_CREATE|os.O_RDWR, info.Mode())
+	if err != nil {
+		return err
+	}
+	inFile, err := bfs.Open(path)
+	if err != nil {
+		return err
+	}
+	if n, err := io.Copy(outFile, inFile); err != nil {
+		return fmt.Errorf("failed to write date to file: %s %s (%d bytes)", path, err, n)
+	}
+	return nil
+}
+
+func copyTextFile(bfs billy.Filesystem, path string, info fs.FileInfo, vars map[string]string, dst billy.Filesystem, dstPath string) error {
+	fileData, errReadFile := ReadFile(bfs, path)
+	if errReadFile != nil {
+		return errReadFile
+	}
+
+	transformed, tfErr := transform(&vars, fileData)
+	if tfErr != nil {
+		return fmt.Errorf("failed to subsitute variables in %s", path)
+	}
+	if fileInfo, err := dst.OpenFile(dstPath, os.O_CREATE|os.O_RDWR, info.Mode()); err == nil {
+		defer fileInfo.Close()
+		if _, err := fileInfo.Write(transformed); err != nil {
+			return err
+		}
+	} else {
+		return err
+	}
+
+	return nil
+}
+
+func transform(env *map[string]string, data string) ([]byte, error) {
 	var output bytes.Buffer
 	tpl, err := template.New("bp").Funcs(sprig.FuncMap()).Parse(data)
 	if err != nil {
