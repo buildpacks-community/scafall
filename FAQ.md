@@ -2,11 +2,11 @@
 
 ## Define a Template Project
 
-A project template is a collection of files.  These can have any folder structure and the files can contain any text content.
+A project template is a collection of files.  These can have any folder structure and the files can contain any text content.  It is customary to have a top-level `{{.ProjectName}}` folder and to include a prompt for `ProjectName`.  This allows the end-user to scaffold the project in a sub directory.
 
-First, create a `git` repository.  Within that repository create the source structure that you want in an output project.  Filenames and directory paths can contain template variables.  
+First, create a `git` repository.  Within that repository create `prompts.toml` and a `{{.ProjectName}}` folder.  In `{{.ProjectName}}` create` the source structure that you want in an output project.  Filenames and directory paths can contain template variables.  
 
-Where filenames, directory paths or source text files contain a template variable, eg: `{{.Foo}}`, then it is usual to provide a `prompts.toml` file.  The `prompts.toml` file allows the end-user to provide a value for `Foo`.  If a template project uses a `prompts.toml` file it must be included a the root project directory.
+Where filenames, directory paths or source text files contain a template variable, eg: `{{.Foo}}`, then it is usual to add a prompt in the top-level `prompts.toml` file.  The `prompts.toml` file allows the end-user to provide a value for `Foo`.  If a template project uses a `prompts.toml` file it must be included in the project root directory.
 
 ## Define a Template Collection
 

@@ -24,15 +24,48 @@ import (
 type Scafall struct {
 	Overrides     map[string]string
 	DefaultValues map[string]interface{}
+	OutputFolder  string
 }
 
-// Create a New Scafall with the given pre-populated Variables and reserved
-// variables
-func New(overrides map[string]string, vars map[string]interface{}) Scafall {
-	return Scafall{
-		Overrides:     overrides,
-		DefaultValues: vars,
+type ScafallOption func(*Scafall)
+
+func WithOutputFolder(folder string) ScafallOption {
+	return func(s *Scafall) {
+		s.OutputFolder = folder
 	}
+}
+
+func WithOverrides(overrides map[string]string) ScafallOption {
+	return func(s *Scafall) {
+		s.Overrides = overrides
+	}
+}
+
+func WithDefaultValues(defaults map[string]interface{}) ScafallOption {
+	return func(s *Scafall) {
+		s.DefaultValues = defaults
+	}
+}
+
+// Create a new Scafall with the given options.
+func NewScafall(opts ...ScafallOption) Scafall {
+	var (
+		defaultOverrides     = map[string]string{}
+		defautlDefaultValues = map[string]interface{}{}
+		defaultOutputFolder  = "."
+	)
+
+	s := Scafall{
+		Overrides:     defaultOverrides,
+		DefaultValues: defautlDefaultValues,
+		OutputFolder:  defaultOutputFolder,
+	}
+
+	for _, opt := range opts {
+		opt(&s)
+	}
+
+	return s
 }
 
 // Present a local directory or a git repo as a Filesystem
@@ -113,7 +146,7 @@ func collection(s Scafall, inFs billy.Filesystem, outputDir string, prompt strin
 	mergo.Merge(&mergedOverrides, s.Overrides)
 	mergo.Merge(&mergedOverrides, overrides)
 
-	values, err := internal.AskPrompts(&prompts, mergedOverrides, vars, os.Stdin)
+	values, err := internal.AskPrompts(prompts, mergedOverrides, vars, os.Stdin)
 	if err != nil {
 		return err
 	}
@@ -130,35 +163,30 @@ func collection(s Scafall, inFs billy.Filesystem, outputDir string, prompt strin
 
 // ScaffoldCollection creates a project after prompting the end-user to choose
 // one of the projects in the collection at url.
-func (s Scafall) ScaffoldCollection(url string, prompt string, outputDir string) error {
+func (s Scafall) ScaffoldCollection(url string, prompt string) error {
 	inFs, err := urlToFs(url)
 	if err != nil {
 		return err
 	}
-	return collection(s, inFs, outputDir, prompt)
+	return collection(s, inFs, s.OutputFolder, prompt)
 }
 
 // Scaffold accepts url containing project templates and creates an output
 // project.  The url can either point to a project template or a collection of
 // project templates.
-func (s Scafall) Scaffold(url string, outputDir string) error {
+func (s Scafall) Scaffold(url string) error {
 	inFs, err := urlToFs(url)
 	if err != nil {
 		return err
 	}
 
 	if isCollection(inFs) {
-		return collection(s, inFs, outputDir, "Choose a project template")
+		return collection(s, inFs, s.OutputFolder, "Choose a project template")
 	}
-	return create(s, inFs, outputDir)
+	return create(s, inFs, s.OutputFolder)
 }
 
 func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
-	// don't clobber any existing files
-	if _, ok := os.Stat(targetDir); ok == nil {
-		return fmt.Errorf("directory %s already exists", targetDir)
-	}
-
 	var values map[string]string
 
 	// Create prompts and merge any overrides
@@ -184,11 +212,17 @@ func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
 		mergo.Merge(&values, mergedOverrides)
 	}
 
+	transformedFs := memfs.New()
+	errApply := internal.Apply(bfs, values, transformedFs)
+	if errApply != nil {
+		return fmt.Errorf("failed to load new project skeleton: %s", errApply)
+	}
+
 	os.MkdirAll(targetDir, 0755)
 	outFs := osfs.New(targetDir)
-	err := internal.Apply(bfs, values, outFs)
-	if err != nil {
-		return fmt.Errorf("failed to load new project skeleton: %s", err)
+	errCopy := internal.Copy(transformedFs, outFs)
+	if errCopy != nil {
+		return fmt.Errorf("failed to write new project: %s", errCopy)
 	}
 
 	return nil

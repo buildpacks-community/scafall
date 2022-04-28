@@ -17,7 +17,7 @@ $ go install github.com/AidanDelaney/scafall@latest
 The `scafall` CLI should now be available for use
 
 ```bash
-$ scafall http://github.com/AidanDelaney/scafall-python-eg.git python-pi
+$ scafall http://github.com/AidanDelaney/scafall-python-eg.git
 ```
 
 ## Programmatic Usage
@@ -30,12 +30,12 @@ package main
 import (
   "fmt"
 
-  "github.com/AidanDelaney/scafall/pkg"
+  scafall "github.com/AidanDelaney/scafall/pkg"
 )
 
 func main() {
-  s := scafall.Scafall{}
-  err := s.Scaffold("http://github.com/AidanDelaney/scafall-python-eg.git", "python-pi")
+  s := scafall.NewScafall(scafall.WithOutputfolder("python-pi"))
+  err := s.Scaffold("http://github.com/AidanDelaney/scafall-python-eg.git")
   if err != nil {
     fmt.Printf("scaffolding failed: %s", err)
   }
@@ -55,7 +55,7 @@ In all cases, overrides _can_ be provided in a `.override.toml` file.  The `.ove
 Project templates are normal source code projects with the addition of a `prompts.toml` file.  The `prompts.toml` file defines questions to ask of the end-user.  The answers to the questions are available as template variables.  For example, suppose we have a project template to create a new Python project, we just need to ask the end-user which python interprer to use and how many python digits to generate:
 
 ```bash
-$ scafall http://github.com/AidanDelaney/scafall-python-eg.git python-pi
+$ scafall http://github.com/AidanDelaney/scafall-python-eg.git
 ? Which Python version to use:
   ▸ python3.10
     python3.9
@@ -90,14 +90,14 @@ Given a template collection, the end-user is prompted to choose to create a proj
 
 ```bash
 $ tree .
-.
-├── README.md
 ├── go
-│   ├── main.go
-│   └── prompts.toml
+│   ├── prompts.toml
+│   └── {{.ProjectName}}
+│       └── main.go
 └── python
-    ├── print_pi.py
-    └── prompts.toml
+    ├── prompts.toml
+    └── {{.ProjectName}}
+        └── print_pi.py
 ```
 
 Running `scafall` produces a default prompt to choose between project templates.  Project template specific prompts follow in end-user prompts.

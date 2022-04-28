@@ -5,22 +5,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	outputFolderFlag = "output-folder"
+)
+
 var (
 	rootCmd = &cobra.Command{
-		Use:   "scafall url output_dir",
+		Use:   "scafall url",
 		Short: "A project generation tool",
 		Long:  `Scafall creates new project from project templates.`,
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := args[0]
-			outputDir := args[1]
+
 			overrides := map[string]string{}
 			vars := map[string]interface{}{}
-			s := scafall.New(overrides, vars)
-			return s.Scaffold(url, outputDir)
+			s := scafall.NewScafall(
+				scafall.WithOverrides(overrides),
+				scafall.WithDefaultValues(vars),
+			)
+			outputDir, err := cmd.Flags().GetString(outputFolderFlag)
+			if err != nil {
+				scafall.WithOutputFolder(outputDir)(&s)
+			}
+
+			return s.Scaffold(url)
 		},
 	}
 )
+
+func init() {
+	rootCmd.Flags().String(outputFolderFlag, ".", "scaffold project in the provided output directory")
+}
 
 // Execute executes the root command.
 func Execute() error {

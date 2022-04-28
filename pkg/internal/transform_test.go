@@ -62,7 +62,7 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 
 			it("produces valid prompt values", func() {
 				prompts := internal.Prompts{currentCase.prompts}
-				values, err := internal.AskPrompts(&prompts, currentCase.overrides, currentCase.defaults, input)
+				values, err := internal.AskPrompts(prompts, currentCase.overrides, currentCase.defaults, input)
 				h.AssertNil(t, err)
 				h.AssertEq(t, values, currentCase.expected)
 			})

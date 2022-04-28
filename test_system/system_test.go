@@ -20,7 +20,6 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 		var (
 			testFolder = filepath.Join("testdata", "bash")
 			expected   = memfs.New()
-			tempDir    string
 			outputDir  string
 		)
 
@@ -29,16 +28,15 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 			expected.OpenFile("bin/build", os.O_CREATE, 0744)
 			expected.OpenFile("bin/detect", os.O_CREATE, 0744)
 
-			tempDir, _ = ioutil.TempDir("", "test")
-			outputDir = filepath.Join(tempDir, "test")
+			outputDir, _ = ioutil.TempDir("", "test")
 		})
 
 		it("scaffolds a project", func() {
 			pwd, _ := os.Getwd()
 			url := filepath.Join(pwd, testFolder)
 
-			s := scafall.Scafall{}
-			err := s.Scaffold(url, outputDir)
+			s := scafall.NewScafall(scafall.WithOutputFolder(outputDir))
+			err := s.Scaffold(url)
 			h.AssertNil(t, err)
 
 			bfs := osfs.New(outputDir)
@@ -53,7 +51,7 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it.After(func() {
-			os.RemoveAll(tempDir)
+			os.RemoveAll(outputDir)
 		})
 	})
 
@@ -61,23 +59,21 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 		var (
 			testFolder = filepath.Join("testdata", "collection")
 			expected   = memfs.New()
-			tempDir    string
 			outputDir  string
 		)
 
 		it.Before(func() {
 			expected.Create("two.go")
 
-			tempDir, _ = ioutil.TempDir("", "test")
-			outputDir = filepath.Join(tempDir, "test")
+			outputDir, _ = ioutil.TempDir("", "test")
 		})
 
 		it("scaffolds a collection", func() {
 			pwd, _ := os.Getwd()
 			url := filepath.Join(pwd, testFolder)
 
-			s := scafall.Scafall{}
-			err := s.Scaffold(url, outputDir)
+			s := scafall.NewScafall(scafall.WithOutputFolder(outputDir))
+			err := s.Scaffold(url)
 			h.AssertNil(t, err)
 
 			fileData, _ := ioutil.ReadFile(filepath.Join(outputDir, "two.go"))
@@ -85,7 +81,7 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it.After(func() {
-			os.RemoveAll(tempDir)
+			os.RemoveAll(outputDir)
 		})
 	})
 }

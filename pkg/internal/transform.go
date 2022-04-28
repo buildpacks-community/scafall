@@ -52,14 +52,14 @@ func requireId(s string) error {
 	return nil
 }
 
-func PreparePrompt(prompt *Prompt, defaults map[string]interface{}, input io.ReadCloser) (*promptui.Prompt, error) {
+func PreparePrompt(prompt Prompt, defaults map[string]interface{}, input io.ReadCloser) (promptui.Prompt, error) {
 	var validateFunc promptui.ValidateFunc = requireId
 	var defaultValue = prompt.Default
 	if k, exists := defaults[prompt.Name]; exists {
 		var ok bool
 		defaultValue, ok = k.(string)
 		if !ok {
-			return nil, fmt.Errorf("prompt for %s contains invalid string %v", prompt.Name, prompt.Default)
+			return promptui.Prompt{}, fmt.Errorf("prompt for %s contains invalid string %v", prompt.Name, prompt.Default)
 		}
 	}
 	if prompt.Required {
@@ -71,16 +71,16 @@ func PreparePrompt(prompt *Prompt, defaults map[string]interface{}, input io.Rea
 		Validate: validateFunc,
 		Stdin:    input,
 	}
-	return &p, nil
+	return p, nil
 }
 
-func PrepareChoices(prompt *Prompt, defaults map[string]interface{}, input io.ReadCloser) (*promptui.Select, error) {
+func PrepareChoices(prompt Prompt, defaults map[string]interface{}, input io.ReadCloser) (promptui.Select, error) {
 	var choices = prompt.Choices
 	if k, exists := defaults[prompt.Name]; exists {
 		var ok bool
 		choices, ok = k.([]string)
 		if !ok {
-			return nil, fmt.Errorf("prompt for %s contains invalid []string %v", prompt.Name, prompt.Default)
+			return promptui.Select{}, fmt.Errorf("prompt for %s contains invalid []string %v", prompt.Name, prompt.Default)
 		}
 	}
 	p := promptui.Select{
@@ -88,10 +88,10 @@ func PrepareChoices(prompt *Prompt, defaults map[string]interface{}, input io.Re
 		Items: choices,
 		Stdin: input,
 	}
-	return &p, nil
+	return p, nil
 }
 
-func AskPrompts(prompts *Prompts, overrides map[string]string, defaults map[string]interface{}, input io.ReadCloser) (map[string]string, error) {
+func AskPrompts(prompts Prompts, overrides map[string]string, defaults map[string]interface{}, input io.ReadCloser) (map[string]string, error) {
 	values := map[string]string{}
 	for _, prompt := range prompts.Prompts {
 		if o, exists := overrides[prompt.Name]; exists {
@@ -103,13 +103,13 @@ func AskPrompts(prompts *Prompts, overrides map[string]string, defaults map[stri
 		var err error
 
 		if prompt.Choices == nil || len(prompt.Choices) == 0 {
-			p, prepErr := PreparePrompt(&prompt, defaults, input)
+			p, prepErr := PreparePrompt(prompt, defaults, input)
 			if prepErr != nil {
 				return nil, prepErr
 			}
 			result, err = p.Run()
 		} else {
-			p, prepErr := PrepareChoices(&prompt, defaults, input)
+			p, prepErr := PrepareChoices(prompt, defaults, input)
 			if prepErr != nil {
 				return nil, prepErr
 			}
@@ -136,28 +136,28 @@ func ReadFile(bfs billy.Filesystem, name string) (string, error) {
 	return string(buf), nil
 }
 
-func ReadPromptFile(bfs billy.Filesystem, name string) (*Prompts, error) {
+func ReadPromptFile(bfs billy.Filesystem, name string) (Prompts, error) {
+	prompts := Prompts{}
 	promptData, err := ReadFile(bfs, name)
 	if err != nil {
-		return nil, err
+		return prompts, err
 	}
 
-	prompts := Prompts{}
 	if _, err := toml.Decode(promptData, &prompts); err != nil {
-		return nil, fmt.Errorf("%s file does not match required format: %s", name, err)
+		return prompts, fmt.Errorf("%s file does not match required format: %s", name, err)
 	}
 
 	for _, prompt := range prompts.Prompts {
 		if util.Contains(ReservedPromptVariables, prompt.Name) {
-			return nil, fmt.Errorf("%s file contains reserved variable: %s", name, prompt.Name)
+			return prompts, fmt.Errorf("%s file contains reserved variable: %s", name, prompt.Name)
 		}
 
 		if prompt.Name == "" || prompt.Prompt == "" {
-			return nil, fmt.Errorf("%s file contains prompt with missing name or prompt required field", name)
+			return prompts, fmt.Errorf("%s file contains prompt with missing name or prompt required field", name)
 		}
 	}
 
-	return &prompts, nil
+	return prompts, nil
 }
 
 func ReadOverrides(bfs billy.Filesystem, name string) (map[string]string, error) {
@@ -202,7 +202,7 @@ func Apply(bfs billy.Filesystem, vars map[string]string, outFs billy.Filesystem)
 		}
 
 		tpath := path
-		if t, terr := transform(&vars, path); terr == nil {
+		if t, terr := transform(vars, path); terr == nil {
 			tpath = string(t)
 		}
 
@@ -220,6 +220,38 @@ func Apply(bfs billy.Filesystem, vars map[string]string, outFs billy.Filesystem)
 			return copyTextFile(bfs, path, info, vars, outFs, tpath)
 		}
 
+		return nil
+	})
+
+	return err
+}
+
+func Copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
+	err := util.Walk(inFs, "/", func(path string, info fs.FileInfo, err error) error {
+		if info.IsDir() {
+			if err := outFs.MkdirAll(path, 0755); err != nil {
+				return err
+			}
+		}
+
+		if !info.IsDir() {
+			outFile, errCreateFile := outFs.OpenFile(path, os.O_CREATE|os.O_RDWR, info.Mode())
+			if errCreateFile != nil {
+				return fmt.Errorf("failed to create file: %s %s", path, err)
+			}
+			defer outFile.Close()
+
+			inFile, errOpen := inFs.Open(path)
+			if errOpen != nil {
+				return fmt.Errorf("failed to copy file: %s %s", path, err)
+			}
+			defer inFile.Close()
+
+			if n, errCopy := io.Copy(outFile, inFile); errCopy != nil {
+				return fmt.Errorf("failed to write data to file: %s %v (%d bytes)", path, err, n)
+			}
+			return nil
+		}
 		return nil
 	})
 
@@ -264,7 +296,7 @@ func copyTextFile(bfs billy.Filesystem, path string, info fs.FileInfo, vars map[
 		return errReadFile
 	}
 
-	transformed, tfErr := transform(&vars, fileData)
+	transformed, tfErr := transform(vars, fileData)
 	if tfErr != nil {
 		return fmt.Errorf("failed to subsitute variables in %s", path)
 	}
@@ -280,13 +312,13 @@ func copyTextFile(bfs billy.Filesystem, path string, info fs.FileInfo, vars map[
 	return nil
 }
 
-func transform(env *map[string]string, data string) ([]byte, error) {
+func transform(env map[string]string, data string) ([]byte, error) {
 	var output bytes.Buffer
 	tpl, err := template.New("bp").Funcs(sprig.FuncMap()).Parse(data)
 	if err != nil {
 		return nil, errors.New("cannot parse file template")
 	}
-	err = tpl.Execute(&output, *env)
+	err = tpl.Execute(&output, env)
 	if err != nil {
 		return nil, errors.New("cannot replace variables in file template")
 	}
