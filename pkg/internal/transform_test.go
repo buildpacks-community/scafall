@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/AidanDelaney/scafall/pkg/internal"
 	h "github.com/buildpacks/pack/testhelpers"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sclevine/spec"
+
+	"github.com/AidanDelaney/scafall/pkg/internal"
 )
 
 type ClosingBuffer struct {
@@ -110,7 +111,7 @@ func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 
 func testApply(t *testing.T, when spec.G, it spec.S) {
 	when("Applying to a filesystem", func() {
-		it("correctlyy replaces strings in a filessytem", func() {
+		it("correctly replaces strings in a filesytem", func() {
 			var bfs = memfs.New()
 			err := bfs.MkdirAll("/{{.Foo}}/{{.Foo}}", 0766)
 			h.AssertNil(t, err)

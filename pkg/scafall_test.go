@@ -1,13 +1,13 @@
 package scafall
 
 // Create a new project from a project template
-func ExampleScaffold() {
+func ExampleScafall_Scaffold() {
 	s := NewScafall(WithOutputFolder("python-pi"))
 
 	s.Scaffold("http://github.com/AidanDelaney/scafall-python-eg.git")
 }
 
-func ExampleScaffold_Overrides() {
+func ExampleScafall_Scaffold_overrides() {
 	overrides := map[string]string{
 		"PythonVersion": "python3.10",
 	}
@@ -17,7 +17,7 @@ func ExampleScaffold_Overrides() {
 	s.Scaffold("http://github.com/AidanDelaney/scafall-python-eg.git")
 }
 
-func ExampleScaffold_Variables() {
+func ExampleScafall_Scaffold_variables() {
 	defaults := map[string]interface{}{
 		"PythonVersion": []string{"python3.10", "python3.9"},
 	}
@@ -29,7 +29,7 @@ func ExampleScaffold_Variables() {
 }
 
 // Create a new project from a project collection
-func ExampleScaffoldCollection() {
+func ExampleScafall_ScaffoldCollection() {
 	s := NewScafall(WithOutputFolder("collection-eg"))
 
 	s.ScaffoldCollection(

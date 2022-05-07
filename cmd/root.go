@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	scafall "github.com/AidanDelaney/scafall/pkg"
 	"github.com/spf13/cobra"
+
+	scafall "github.com/AidanDelaney/scafall/pkg"
 )
 
 const (

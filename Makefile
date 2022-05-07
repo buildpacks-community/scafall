@@ -1,31 +1,41 @@
 ## variables
-BIN_DIR := $(GOPATH)/bin
-GO_ACC := $(BIN_DIR)/go-acc@latest
+GOCMD?=go
 CODE_COVERAGE_FILE:= coverage
 CODE_COVERAGE_FILE_TXT := $(CODE_COVERAGE_FILE).txt
+PACKAGE_BASE=github.com/AidanDelaney/scafall
 
 all: build test
 
 build:
 	go build -o scafall main.go
 
-test: test-clean test-unit test-integration test-system
+test: lint test-unit test-integration test-system
 
-test-clean:
-	@echo "	cleaning test cache"
-	go clean -testcache ./...
+install-golangci-lint:
+	@echo "> Installing golangci-lint..."
+	cd tools && $(GOCMD) install github.com/golangci/golangci-lint/cmd/golangci-lint
 
-$(GO_ACC):
-	@echo "	installing testing tools"
-	which go-acc || go install -v github.com/ory/go-acc@latest
-	$(eval export PATH=$(GO_ACC):$(PATH))
+install-go-acc:
+	@echo "	installing go-acc"
+	cd tools && $(GOCMD) install github.com/ory/go-acc
 
-test-unit: $(GO_ACC) test-clean
+test-unit: install-go-acc
 	@echo "	running unit tests"
 	go-acc ./pkg/... -o $(CODE_COVERAGE_FILE_TXT)
 
-test-integration: test-clean
-	go test ./test_integration/
+test-integration:
+	go test ./test_integration/ -count=1
 
-test-system: test-clean
-	go test ./test_system/
+test-system:
+	go test ./test_system/ -count=1
+
+install-goimports:
+	@echo "> Installing goimports..."
+	cd tools && $(GOCMD) install golang.org/x/tools/cmd/goimports
+
+format: install-goimports
+	@echo "> Formating code..."
+	@goimports -l -w -local ${PACKAGE_BASE} -v -srcdir . .
+
+lint: install-golangci-lint
+	golangci-lint run

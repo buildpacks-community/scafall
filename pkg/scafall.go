@@ -4,18 +4,19 @@
 package scafall
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/AidanDelaney/scafall/pkg/internal"
-	"github.com/imdario/mergo"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/imdario/mergo"
+
+	"github.com/AidanDelaney/scafall/pkg/internal"
 )
 
 // Scafall allows programmatic control over the default values for variables
@@ -27,28 +28,28 @@ type Scafall struct {
 	OutputFolder  string
 }
 
-type ScafallOption func(*Scafall)
+type Option func(*Scafall)
 
-func WithOutputFolder(folder string) ScafallOption {
+func WithOutputFolder(folder string) Option {
 	return func(s *Scafall) {
 		s.OutputFolder = folder
 	}
 }
 
-func WithOverrides(overrides map[string]string) ScafallOption {
+func WithOverrides(overrides map[string]string) Option {
 	return func(s *Scafall) {
 		s.Overrides = overrides
 	}
 }
 
-func WithDefaultValues(defaults map[string]interface{}) ScafallOption {
+func WithDefaultValues(defaults map[string]interface{}) Option {
 	return func(s *Scafall) {
 		s.DefaultValues = defaults
 	}
 }
 
 // Create a new Scafall with the given options.
-func NewScafall(opts ...ScafallOption) Scafall {
+func NewScafall(opts ...Option) Scafall {
 	var (
 		defaultOverrides     = map[string]string{}
 		defautlDefaultValues = map[string]interface{}{}
@@ -143,8 +144,14 @@ func collection(s Scafall, inFs billy.Filesystem, outputDir string, prompt strin
 		return err
 	}
 	mergedOverrides := make(map[string]string)
-	mergo.Merge(&mergedOverrides, s.Overrides)
-	mergo.Merge(&mergedOverrides, overrides)
+	err = mergo.Merge(&mergedOverrides, s.Overrides)
+	if err != nil {
+		return errors.New("internal error when merging overrides")
+	}
+	err = mergo.Merge(&mergedOverrides, overrides)
+	if err != nil {
+		return fmt.Errorf("internal error when merging overrides from %s", internal.OverrideFile)
+	}
 
 	values, err := internal.AskPrompts(prompts, mergedOverrides, vars, os.Stdin)
 	if err != nil {
@@ -203,13 +210,22 @@ func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
 			}
 		}
 		mergedOverrides := make(map[string]string)
-		mergo.Merge(&mergedOverrides, s.Overrides)
-		mergo.Merge(&mergedOverrides, overrides)
+		err = mergo.Merge(&mergedOverrides, s.Overrides)
+		if err != nil {
+			return fmt.Errorf("internal error when merging overrides from %s", internal.OverrideFile)
+		}
+		err = mergo.Merge(&mergedOverrides, overrides)
+		if err != nil {
+			return fmt.Errorf("internal error when merging overrides from %s", internal.OverrideFile)
+		}
 		values, err = internal.AskPrompts(prompts, mergedOverrides, s.DefaultValues, os.Stdin)
 		if err != nil {
 			return err
 		}
-		mergo.Merge(&values, mergedOverrides)
+		err = mergo.Merge(&values, mergedOverrides)
+		if err != nil {
+			return fmt.Errorf("internal error when merging overrides with prompt values")
+		}
 	}
 
 	transformedFs := memfs.New()
@@ -218,7 +234,12 @@ func create(s Scafall, bfs billy.Filesystem, targetDir string) error {
 		return fmt.Errorf("failed to load new project skeleton: %s", errApply)
 	}
 
-	os.MkdirAll(targetDir, 0755)
+	if targetDir != "." {
+		err := os.MkdirAll(targetDir, 0755)
+		if err != nil {
+			return fmt.Errorf("can not create target directory %s", targetDir)
+		}
+	}
 	outFs := osfs.New(targetDir)
 	errCopy := internal.Copy(transformedFs, outFs)
 	if errCopy != nil {

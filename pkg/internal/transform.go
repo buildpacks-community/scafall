@@ -10,13 +10,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AidanDelaney/scafall/pkg/util"
-	"github.com/gabriel-vasile/mimetype"
-
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/go-git/go-billy/v5"
 	"github.com/manifoldco/promptui"
+
+	"github.com/AidanDelaney/scafall/pkg/util"
 )
 
 const (
@@ -48,12 +48,12 @@ func requireNonEmptyString(s string) error {
 	return nil
 }
 
-func requireId(s string) error {
+func requireID(s string) error {
 	return nil
 }
 
 func PreparePrompt(prompt Prompt, defaults map[string]interface{}, input io.ReadCloser) (promptui.Prompt, error) {
-	var validateFunc promptui.ValidateFunc = requireId
+	var validateFunc promptui.ValidateFunc = requireID
 	var defaultValue = prompt.Default
 	if k, exists := defaults[prompt.Name]; exists {
 		var ok bool
@@ -176,7 +176,7 @@ func ReadOverrides(bfs billy.Filesystem, name string) (map[string]string, error)
 		return nil, fmt.Errorf("%s file does not match required format: %s", name, err)
 	}
 
-	for k, _ := range overrides {
+	for k := range overrides {
 		if util.Contains(ReservedPromptVariables, k) {
 			return nil, fmt.Errorf("%s file contains reserved variable: %s", name, k)
 		}

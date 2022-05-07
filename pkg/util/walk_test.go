@@ -27,14 +27,14 @@ func testWalk(t *testing.T, when spec.G, it spec.S) {
 		bfs.Create(".hidden")
 		bfs.Create("toplevel-1/afile")
 		bfs.Create("toplevel-1/level1-1/file")
-		util.WriteFile(bfs, "executable", []byte{}, 744)
+		util.WriteFile(bfs, "executable", []byte{}, 0744)
 		listing = []string{"/", "/.hidden", "/executable", "/toplevel-1", "/toplevel-1/afile", "/toplevel-1/level1-1", "/toplevel-1/level1-1/file"}
 	})
 	it.After(func() {})
 
 	when("A directory tree is walked", func() {
 		it("finds all files and directories", func() {
-			var found []string = []string{}
+			var found = []string{}
 			u.Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
 				found = append(found, path)
 				return nil
