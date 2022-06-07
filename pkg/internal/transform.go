@@ -6,17 +6,21 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/fs"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
+	"github.com/coveooss/gotemplate/v3/collections"
+	t "github.com/coveooss/gotemplate/v3/template"
+	cp "github.com/otiai10/copy"
+
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/go-git/go-billy/v5"
 	"github.com/manifoldco/promptui"
 
-	"github.com/AidanDelaney/scafall/pkg/util"
+	"github.com/AidanDelaney/scafall/pkg/internal/util"
 )
 
 const (
@@ -26,7 +30,8 @@ const (
 
 var (
 	ReservedPromptVariables = []string{}
-	IgnoredNames            = []string{"/" + PromptFile, "/" + OverrideFile, "/.git"}
+	IgnoredNames            = []string{PromptFile, OverrideFile}
+	IgnoredDirectories      = []string{".git", "node_modules"}
 )
 
 type Prompt struct {
@@ -91,11 +96,14 @@ func PrepareChoices(prompt Prompt, defaults map[string]interface{}, input io.Rea
 	return p, nil
 }
 
-func AskPrompts(prompts Prompts, overrides map[string]string, defaults map[string]interface{}, input io.ReadCloser) (map[string]string, error) {
-	values := map[string]string{}
+func AskPrompts(prompts Prompts, overrides collections.IDictionary, defaults map[string]interface{}, input io.ReadCloser) (collections.IDictionary, error) {
+	if overrides == nil {
+		overrides = collections.CreateDictionary()
+	}
+	values := collections.CreateDictionary()
 	for _, prompt := range prompts.Prompts {
-		if o, exists := overrides[prompt.Name]; exists {
-			values[prompt.Name] = o
+		if overrides.Has(prompt.Name) {
+			values.Set(prompt.Name, overrides.Get(prompt.Name))
 			continue
 		}
 
@@ -116,150 +124,170 @@ func AskPrompts(prompts Prompts, overrides map[string]string, defaults map[strin
 			_, result, err = p.Run()
 		}
 		if err == nil {
-			values[prompt.Name] = result
+			values.Set(prompt.Name, result)
 		}
 	}
 	return values, nil
 }
 
-func ReadFile(bfs billy.Filesystem, name string) (string, error) {
-	file, err := bfs.Open(name)
+func ReadFile(path string) (string, error) {
+	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("cannot open file %s", name)
+		return "", fmt.Errorf("cannot open file %s", path)
 	}
 	defer file.Close()
 
 	buf, err := io.ReadAll(file)
 	if err != nil {
-		return "", fmt.Errorf("cannot read file %s", name)
+		return "", fmt.Errorf("cannot read file %s", path)
 	}
 	return string(buf), nil
 }
 
-func ReadPromptFile(bfs billy.Filesystem, name string) (Prompts, error) {
+func ReadPromptFile(promptFile string) (Prompts, error) {
 	prompts := Prompts{}
-	promptData, err := ReadFile(bfs, name)
+	promptData, err := ReadFile(promptFile)
 	if err != nil {
 		return prompts, err
 	}
 
 	if _, err := toml.Decode(promptData, &prompts); err != nil {
-		return prompts, fmt.Errorf("%s file does not match required format: %s", name, err)
+		return prompts, fmt.Errorf("%s file does not match required format: %s", promptFile, err)
 	}
 
 	for _, prompt := range prompts.Prompts {
 		if util.Contains(ReservedPromptVariables, prompt.Name) {
-			return prompts, fmt.Errorf("%s file contains reserved variable: %s", name, prompt.Name)
+			return prompts, fmt.Errorf("%s file contains reserved variable: %s", promptFile, prompt.Name)
 		}
 
 		if prompt.Name == "" || prompt.Prompt == "" {
-			return prompts, fmt.Errorf("%s file contains prompt with missing name or prompt required field", name)
+			return prompts, fmt.Errorf("%s file contains prompt with missing name or prompt required field", promptFile)
 		}
 	}
 
 	return prompts, nil
 }
 
-func ReadOverrides(bfs billy.Filesystem, name string) (map[string]string, error) {
-	overrides := map[string]string{}
+func ReadOverrides(overrideFile string) (collections.IDictionary, error) {
+	var overrides map[string]string
 	// if no override file
-	if _, err := bfs.Stat(name); err != nil {
-		return overrides, nil
+	if _, err := os.Stat(overrideFile); err != nil {
+		return collections.CreateDictionary(), nil
 	}
 
-	overrideData, err := ReadFile(bfs, name)
+	overrideData, err := ReadFile(overrideFile)
 	if err != nil {
 		return nil, err
 	}
 
 	if _, err := toml.Decode(overrideData, &overrides); err != nil {
-		return nil, fmt.Errorf("%s file does not match required format: %s", name, err)
+		return nil, fmt.Errorf("%s file does not match required format: %s", overrideFile, err)
 	}
 
-	for k := range overrides {
+	oDict := collections.CreateDictionary()
+	for k, v := range overrides {
 		if util.Contains(ReservedPromptVariables, k) {
-			return nil, fmt.Errorf("%s file contains reserved variable: %s", name, k)
+			return nil, fmt.Errorf("%s file contains reserved variable: %s", overrideFile, k)
+		}
+		oDict.Add(k, v)
+	}
+
+	return oDict, nil
+}
+
+func Apply(inputDir string, vars collections.IDictionary, outputDir string) error {
+	transformedDir, _ := ioutil.TempDir("", "scafall")
+	defer os.RemoveAll(transformedDir)
+	files, err := findTransformableFiles(inputDir)
+	if err != nil {
+		return fmt.Errorf("failed to find files in input folder: %s %s", inputDir, err)
+	}
+
+	opts := t.DefaultOptions().
+		Set(t.Overwrite, t.Sprig, t.StrictErrorCheck).
+		Unset(t.Razor)
+	template, err := t.NewTemplate(
+		transformedDir,
+		vars,
+		"",
+		opts)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		// replace vars in file
+		filePath, _ := filepath.Rel(inputDir, file)
+		transformedFilePath, err := replace(vars, filePath)
+		if err != nil {
+			return fmt.Errorf("failed to replace variable in filename: %s", file)
+		}
+		dstPath := filepath.Join(transformedDir, transformedFilePath)
+		dstDir := filepath.Dir(dstPath)
+		mkdirErr := os.MkdirAll(dstDir, 0744)
+		if mkdirErr != nil {
+			return fmt.Errorf("failed to create target directory %s", dstDir)
+		}
+		mvErr := os.Rename(file, dstPath)
+		if mvErr != nil {
+			return fmt.Errorf("failed to rename %s to %s", filePath, transformedFilePath)
 		}
 	}
 
-	return overrides, nil
-}
-
-func isPrefixOf(path string, prefixes []string) bool {
-	for _, p := range prefixes {
-		if strings.HasPrefix(path, p) {
-			return true
-		}
+	absoluteFilepaths, err := findTextFiles(transformedDir)
+	if err != nil {
+		return err
 	}
-	return false
-}
+	_, err = template.ProcessTemplates(transformedDir, transformedDir, absoluteFilepaths...)
+	if err != nil {
+		return err
+	}
 
-func Apply(bfs billy.Filesystem, vars map[string]string, outFs billy.Filesystem) error {
-	err := util.Walk(bfs, "/", func(path string, info fs.FileInfo, err error) error {
-		// Do not write the prompt file to the output project
-		if isPrefixOf(path, IgnoredNames) {
-			return nil
-		}
-
-		tpath := path
-		if t, terr := transform(vars, path); terr == nil {
-			tpath = string(t)
-		}
-
-		if info.IsDir() {
-			if err := outFs.MkdirAll(tpath, 0755); err != nil {
-				return err
-			}
-		}
-
-		if !info.IsDir() {
-			if !isTextfile(bfs, path) {
-				return copyBinaryFile(bfs, path, info, outFs, tpath)
-			}
-
-			return copyTextFile(bfs, path, info, vars, outFs, tpath)
-		}
-
-		return nil
-	})
-
+	err = cp.Copy(transformedDir, outputDir)
+	if err != nil {
+		os.RemoveAll(outputDir)
+		return err
+	}
 	return err
 }
 
-func Copy(inFs billy.Filesystem, outFs billy.Filesystem) error {
-	err := util.Walk(inFs, "/", func(path string, info fs.FileInfo, err error) error {
-		if info.IsDir() {
-			if err := outFs.MkdirAll(path, 0755); err != nil {
-				return err
-			}
+func replace(env collections.IDictionary, data string) (string, error) {
+	var output bytes.Buffer
+	tpl, err := template.New("bp").Funcs(sprig.FuncMap()).Parse(data)
+	if err != nil {
+		return "", errors.New("cannot parse file template")
+	}
+	err = tpl.Execute(&output, env)
+	if err != nil {
+		return "", errors.New("cannot replace variables in file template")
+	}
+	return output.String(), err
+}
+
+func findTransformableFiles(dir string) ([]string, error) {
+	files := []string{}
+	err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
+		if info.IsDir() && util.Contains(IgnoredDirectories, info.Name()) {
+			return filepath.SkipDir
 		}
 
 		if !info.IsDir() {
-			outFile, errCreateFile := outFs.OpenFile(path, os.O_CREATE|os.O_RDWR, info.Mode())
-			if errCreateFile != nil {
-				return fmt.Errorf("failed to create file: %s %s", path, err)
+			// Ignore all prompts.toml files and any top-level README.md
+			rootReadme := filepath.Join(dir, "README")
+			if util.Contains(IgnoredNames, info.Name()) || strings.HasPrefix(path, rootReadme) {
+				return nil
 			}
-			defer outFile.Close()
 
-			inFile, errOpen := inFs.Open(path)
-			if errOpen != nil {
-				return fmt.Errorf("failed to copy file: %s %s", path, err)
-			}
-			defer inFile.Close()
-
-			if n, errCopy := io.Copy(outFile, inFile); errCopy != nil {
-				return fmt.Errorf("failed to write data to file: %s %v (%d bytes)", path, err, n)
-			}
-			return nil
+			files = append(files, path)
 		}
 		return nil
 	})
 
-	return err
+	return files, err
 }
 
-func isTextfile(bfs billy.Filesystem, path string) bool {
-	fd, err := bfs.Open(path)
+func isTextfile(path string) bool {
+	fd, err := os.Open(path)
 	if err != nil {
 		return false
 	}
@@ -268,59 +296,19 @@ func isTextfile(bfs billy.Filesystem, path string) bool {
 		return false
 	}
 
-	if strings.HasPrefix(mtype.String(), "text") {
-		return true
-	}
-
-	return false
+	return strings.HasPrefix(mtype.String(), "text")
 }
 
-func copyBinaryFile(bfs billy.Filesystem, path string, info fs.FileInfo, dst billy.Filesystem, dstPath string) error {
-	outFile, err := dst.OpenFile(dstPath, os.O_CREATE|os.O_RDWR, info.Mode())
-	if err != nil {
-		return err
-	}
-	inFile, err := bfs.Open(path)
-	if err != nil {
-		return err
-	}
-	if n, err := io.Copy(outFile, inFile); err != nil {
-		return fmt.Errorf("failed to write date to file: %s %s (%d bytes)", path, err, n)
-	}
-	return nil
-}
-
-func copyTextFile(bfs billy.Filesystem, path string, info fs.FileInfo, vars map[string]string, dst billy.Filesystem, dstPath string) error {
-	fileData, errReadFile := ReadFile(bfs, path)
-	if errReadFile != nil {
-		return errReadFile
-	}
-
-	transformed, tfErr := transform(vars, fileData)
-	if tfErr != nil {
-		return fmt.Errorf("failed to subsitute variables in %s", path)
-	}
-	if fileInfo, err := dst.OpenFile(dstPath, os.O_CREATE|os.O_RDWR, info.Mode()); err == nil {
-		defer fileInfo.Close()
-		if _, err := fileInfo.Write(transformed); err != nil {
-			return err
+func findTextFiles(dir string) ([]string, error) {
+	files := []string{}
+	err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
+		if !info.IsDir() {
+			if isTextfile(path) && !util.Contains(IgnoredNames, info.Name()) {
+				files = append(files, path)
+			}
 		}
-	} else {
-		return err
-	}
+		return nil
+	})
 
-	return nil
-}
-
-func transform(env map[string]string, data string) ([]byte, error) {
-	var output bytes.Buffer
-	tpl, err := template.New("bp").Funcs(sprig.FuncMap()).Parse(data)
-	if err != nil {
-		return nil, errors.New("cannot parse file template")
-	}
-	err = tpl.Execute(&output, env)
-	if err != nil {
-		return nil, errors.New("cannot replace variables in file template")
-	}
-	return output.Bytes(), err
+	return files, err
 }

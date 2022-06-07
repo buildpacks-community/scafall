@@ -1,2 +1,1 @@
 {{.duck | upper}}
-{{.parrot}}

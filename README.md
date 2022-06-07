@@ -18,6 +18,15 @@ The `scafall` CLI should now be available for use
 
 ```bash
 $ scafall http://github.com/AidanDelaney/scafall-python-eg.git
+✔ Please input a project name: pyexample
+Use the arrow keys to navigate: ↓ ↑ → ←
+? Which Python version to use:
+  ▸ python3.10
+    python3.9
+    python3.8
+How many digits of Pi to render: 3
+$ cd pyexample
+$ ./print_pi.py
 ```
 
 ## Programmatic Usage
@@ -103,7 +112,7 @@ $ tree .
 Running `scafall` produces a default prompt to choose between project templates.  Project template specific prompts follow in end-user prompts.
 
 ```bash
-$ scafall http://github.com/AidanDelaney/scafall-collection-eg/ collection-eg
+$ scafall http://github.com/AidanDelaney/scafall-collection-eg/
 Use the arrow keys to navigate: ↓ ↑ → ←
 ? Choose a project template:
   ▸ go

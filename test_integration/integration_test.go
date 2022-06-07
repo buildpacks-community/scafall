@@ -87,6 +87,10 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			templateFile := filepath.Join(outputDir, "quack", "quack.go")
 			_, err := os.Stat(templateFile)
 			h.AssertNil(t, err)
+			_, err = os.Stat(filepath.Join(outputDir, "prompts.toml"))
+			h.AssertNotNil(t, err)
+			_, err = os.Stat(filepath.Join(outputDir, "README.txt"))
+			h.AssertNotNil(t, err)
 			data, _ := ioutil.ReadFile(templateFile)
 			h.AssertContains(t, string(data), "QUACK")
 

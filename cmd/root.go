@@ -19,12 +19,7 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := args[0]
 
-			overrides := map[string]string{}
-			vars := map[string]interface{}{}
-			s := scafall.NewScafall(
-				scafall.WithOverrides(overrides),
-				scafall.WithDefaultValues(vars),
-			)
+			s := scafall.NewScafall()
 			outputDir, err := cmd.Flags().GetString(outputFolderFlag)
 			if err != nil {
 				scafall.WithOutputFolder(outputDir)(&s)
