@@ -119,39 +119,6 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 
 	when("top level command is executed", func() {
 		var (
-			testFolder = filepath.Join("testdata", "collection")
-			expected   = memfs.New()
-			outputDir  string
-		)
-
-		it.Before(func() {
-			expected.Create("two.go")
-
-			outputDir, _ = ioutil.TempDir("", "test")
-		})
-
-		it("scaffolds a collection", func() {
-			pwd, _ := os.Getwd()
-			url := filepath.Join(pwd, testFolder)
-
-			s := scafall.NewScafall(scafall.WithOutputFolder(outputDir))
-			err := s.Scaffold(url)
-			h.AssertNil(t, err)
-
-			fileData, _ := ioutil.ReadFile(filepath.Join(outputDir, "two.go"))
-			h.AssertContains(t, string(fileData), "test")
-
-			_, err = os.Stat(filepath.Join(outputDir, "examples/foo/foo.txt"))
-			h.AssertNil(t, err)
-		})
-
-		it.After(func() {
-			os.RemoveAll(outputDir)
-		})
-	})
-
-	when("top level command is executed", func() {
-		var (
 			expected  = memfs.New()
 			outputDir string
 		)

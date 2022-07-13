@@ -6,6 +6,7 @@ package scafall
 import (
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/AidanDelaney/scafall/pkg/internal"
 )
@@ -14,9 +15,9 @@ import (
 // Overrides are skipped in prompts but can be locally overridden in a
 // `.override.toml` file.
 type Scafall struct {
-	Overrides     map[string]string
-	DefaultValues map[string]interface{}
-	OutputFolder  string
+	Overrides    map[string]string
+	OutputFolder string
+	SubPath      string
 }
 
 type Option func(*Scafall)
@@ -33,24 +34,22 @@ func WithOverrides(overrides map[string]string) Option {
 	}
 }
 
-func WithDefaultValues(defaults map[string]interface{}) Option {
+func WithSubPath(subPath string) Option {
 	return func(s *Scafall) {
-		s.DefaultValues = defaults
+		s.SubPath = subPath
 	}
 }
 
 // Create a new Scafall with the given options.
 func NewScafall(opts ...Option) Scafall {
 	var (
-		defaultOverrides     = map[string]string{}
-		defautlDefaultValues = map[string]interface{}{}
-		defaultOutputFolder  = "."
+		defaultOverrides    = map[string]string{}
+		defaultOutputFolder = "."
 	)
 
 	s := Scafall{
-		Overrides:     defaultOverrides,
-		DefaultValues: defautlDefaultValues,
-		OutputFolder:  defaultOutputFolder,
+		Overrides:    defaultOverrides,
+		OutputFolder: defaultOutputFolder,
 	}
 
 	for _, opt := range opts {
@@ -60,19 +59,6 @@ func NewScafall(opts ...Option) Scafall {
 	return s
 }
 
-// ScaffoldCollection creates a project after prompting the end-user to choose
-// one of the projects in the collection at url.
-func (s Scafall) ScaffoldCollection(url string, prompt string) error {
-	tmpDir, _ := ioutil.TempDir("", "scafall")
-	defer os.RemoveAll(tmpDir)
-
-	inFs, err := internal.URLToFs(url, tmpDir)
-	if err != nil {
-		return err
-	}
-	return internal.Collection(inFs, s.Overrides, s.DefaultValues, s.OutputFolder, prompt)
-}
-
 // Scaffold accepts url containing project templates and creates an output
 // project.  The url can either point to a project template or a collection of
 // project templates.
@@ -80,13 +66,21 @@ func (s Scafall) Scaffold(url string) error {
 	tmpDir, _ := ioutil.TempDir("", "scafall")
 	defer os.RemoveAll(tmpDir)
 
-	inFs, err := internal.URLToFs(url, tmpDir)
+	var inFs *string
+	fs, err := internal.URLToFs(url, s.SubPath, tmpDir)
 	if err != nil {
 		return err
 	}
+	inFs = &fs
 
-	if internal.IsCollection(inFs) {
-		return internal.Collection(inFs, s.Overrides, s.DefaultValues, s.OutputFolder, "Choose a project template")
+	if isCollection, choices := internal.IsCollection(*inFs); isCollection {
+		template, err := internal.AskQuestion("choose a project template", choices, os.Stdin)
+		if err != nil {
+			return err
+		}
+		fs = path.Join(fs, template)
+		inFs = &fs
 	}
-	return internal.Create(inFs, s.Overrides, s.DefaultValues, s.OutputFolder)
+
+	return internal.Create(*inFs, s.Overrides, s.OutputFolder)
 }

@@ -8,14 +8,6 @@ First, create a `git` repository.  Within that repository create `prompts.toml` 
 
 Where filenames, directory paths or source text files contain a template variable, eg: `{{.Foo}}`, then it is usual to add a prompt in the top-level `prompts.toml` file.  The `prompts.toml` file allows the end-user to provide a value for `Foo`.  If a template project uses a `prompts.toml` file it must be included in the project root directory.
 
-## Define a Template Collection
-
-A template collection is a git repository that contains multiple template projects.
-
-Create a `git` repository.  Within that repository add a directory for each project template in the collection.  The contents of each project template follows the structure described in [Define a Template Project](#define_a_template_project).
-
-Given a template collection, the end-user is prompted to choose to create a project from one of the project templates.
-
 ## Create a Templated Directory
 
 In a project template we can create a directory such as `pkg/{{.PackageName}}`.  In an output project `{{.PackageName}}`  will be replaces with the value of `PackageName` variable.

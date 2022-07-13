@@ -57,16 +57,9 @@ func requireID(s string) error {
 	return nil
 }
 
-func PreparePrompt(prompt Prompt, defaults map[string]interface{}, input io.ReadCloser) (promptui.Prompt, error) {
+func PreparePrompt(prompt Prompt, input io.ReadCloser) (promptui.Prompt, error) {
 	var validateFunc promptui.ValidateFunc = requireID
 	var defaultValue = prompt.Default
-	if k, exists := defaults[prompt.Name]; exists {
-		var ok bool
-		defaultValue, ok = k.(string)
-		if !ok {
-			return promptui.Prompt{}, fmt.Errorf("prompt for %s contains invalid string %v", prompt.Name, prompt.Default)
-		}
-	}
 	if prompt.Required {
 		validateFunc = requireNonEmptyString
 	}
@@ -79,15 +72,8 @@ func PreparePrompt(prompt Prompt, defaults map[string]interface{}, input io.Read
 	return p, nil
 }
 
-func PrepareChoices(prompt Prompt, defaults map[string]interface{}, input io.ReadCloser) (promptui.Select, error) {
+func PrepareChoices(prompt Prompt, input io.ReadCloser) (promptui.Select, error) {
 	var choices = prompt.Choices
-	if k, exists := defaults[prompt.Name]; exists {
-		var ok bool
-		choices, ok = k.([]string)
-		if !ok {
-			return promptui.Select{}, fmt.Errorf("prompt for %s contains invalid []string %v", prompt.Name, prompt.Default)
-		}
-	}
 	p := promptui.Select{
 		Label: prompt.Prompt,
 		Items: choices,
@@ -96,7 +82,17 @@ func PrepareChoices(prompt Prompt, defaults map[string]interface{}, input io.Rea
 	return p, nil
 }
 
-func AskPrompts(prompts Prompts, overrides collections.IDictionary, defaults map[string]interface{}, input io.ReadCloser) (collections.IDictionary, error) {
+func AskQuestion(question string, choices []string, input io.ReadCloser) (string, error) {
+	prompt := promptui.Select{
+		Label: question,
+		Items: choices,
+		Stdin: input,
+	}
+	_, result, err := prompt.Run()
+	return result, err
+}
+
+func AskPrompts(prompts Prompts, overrides collections.IDictionary, input io.ReadCloser) (collections.IDictionary, error) {
 	if overrides == nil {
 		overrides = collections.CreateDictionary()
 	}
@@ -111,13 +107,13 @@ func AskPrompts(prompts Prompts, overrides collections.IDictionary, defaults map
 		var err error
 
 		if prompt.Choices == nil || len(prompt.Choices) == 0 {
-			p, prepErr := PreparePrompt(prompt, defaults, input)
+			p, prepErr := PreparePrompt(prompt, input)
 			if prepErr != nil {
 				return nil, prepErr
 			}
 			result, err = p.Run()
 		} else {
-			p, prepErr := PrepareChoices(prompt, defaults, input)
+			p, prepErr := PrepareChoices(prompt, input)
 			if prepErr != nil {
 				return nil, prepErr
 			}

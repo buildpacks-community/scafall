@@ -28,7 +28,6 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 		text      string
 		expected  collections.IDictionary
 		overrides collections.IDictionary
-		defaults  map[string]interface{}
 	}
 	prompt := internal.Prompt{
 		Name:   "Duck",
@@ -45,7 +44,7 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack},
 		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack, overrides: duckQuack},
 		// \x0d is Enter
-		{prompts: []internal.Prompt{prompt}, text: "\x0d", expected: duckQuack, overrides: collections.CreateDictionary(), defaults: map[string]interface{}{"Duck": "quack"}},
+		{prompts: []internal.Prompt{prompt}, text: "\x0d", expected: duckQuack, overrides: duckQuack},
 		// \x1b\x5b\x42 is the terminal escape sequence for down arrow
 		{prompts: []internal.Prompt{selection}, text: "\x0d", expected: collections.CreateDictionary().Add("Duck", "moo")},
 		{prompts: []internal.Prompt{selection}, text: "\x1b\x5b\x42\x0d", expected: duckQuack},
@@ -66,7 +65,7 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 
 			it("produces valid prompt values", func() {
 				prompts := internal.Prompts{currentCase.prompts}
-				values, err := internal.AskPrompts(prompts, currentCase.overrides, currentCase.defaults, input)
+				values, err := internal.AskPrompts(prompts, currentCase.overrides, input)
 				h.AssertNil(t, err)
 				h.AssertEq(t, values, currentCase.expected)
 			})
