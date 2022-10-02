@@ -1,21 +1,16 @@
 package internal
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Masterminds/sprig/v3"
 	"github.com/coveooss/gotemplate/v3/collections"
-	t "github.com/coveooss/gotemplate/v3/template"
-	cp "github.com/otiai10/copy"
 
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/manifoldco/promptui"
@@ -24,8 +19,9 @@ import (
 )
 
 const (
-	PromptFile   string = "prompts.toml"
-	OverrideFile string = ".override.toml"
+	PromptFile           string = "prompts.toml"
+	OverrideFile         string = ".override.toml"
+	ReplacementDelimiter string = "{&{&"
 )
 
 var (
@@ -127,13 +123,7 @@ func AskPrompts(prompts Prompts, overrides collections.IDictionary, input io.Rea
 }
 
 func ReadFile(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("cannot open file %s", path)
-	}
-	defer file.Close()
-
-	buf, err := io.ReadAll(file)
+	buf, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot read file %s", path)
 	}
@@ -191,77 +181,47 @@ func ReadOverrides(overrideFile string) (collections.IDictionary, error) {
 	return oDict, nil
 }
 
+type SourceFile struct {
+	FilePath    string
+	FileContent string
+	FileMode    fs.FileMode
+}
+
 func Apply(inputDir string, vars collections.IDictionary, outputDir string) error {
-	transformedDir, _ := ioutil.TempDir("", "scafall")
-	defer os.RemoveAll(transformedDir)
 	files, err := findTransformableFiles(inputDir)
 	if err != nil {
 		return fmt.Errorf("failed to find files in input folder: %s %s", inputDir, err)
 	}
 
-	opts := t.DefaultOptions().
-		Set(t.Overwrite, t.Sprig, t.StrictErrorCheck).
-		Unset(t.Razor)
-	template, err := t.NewTemplate(
-		transformedDir,
-		vars,
-		"",
-		opts)
-	if err != nil {
-		return err
-	}
-
 	for _, file := range files {
-		// replace vars in file
-		filePath, _ := filepath.Rel(inputDir, file)
-		transformedFilePath, err := replace(vars, filePath)
+		outputFile, err := Replace(vars, file)
 		if err != nil {
-			return fmt.Errorf("failed to replace variable in filename: %s", file)
+			return err
 		}
-		dstPath := filepath.Join(transformedDir, transformedFilePath)
-		dstDir := filepath.Dir(dstPath)
+
+		dstDir := filepath.Join(outputDir, filepath.Dir(outputFile.FilePath))
 		mkdirErr := os.MkdirAll(dstDir, 0744)
 		if mkdirErr != nil {
 			return fmt.Errorf("failed to create target directory %s", dstDir)
 		}
-		mvErr := os.Rename(file, dstPath)
-		if mvErr != nil {
-			return fmt.Errorf("failed to rename %s to %s", filePath, transformedFilePath)
+
+		outputPath := filepath.Join(outputDir, outputFile.FilePath)
+		if outputFile.FileContent == "" {
+			inputPath := filepath.Join(inputDir, file.FilePath)
+			mvErr := os.Rename(inputPath, outputPath)
+			if mvErr != nil {
+				return fmt.Errorf("failed to rename %s to %s", file.FilePath, outputFile.FilePath)
+			}
+		} else {
+			os.WriteFile(outputPath, []byte(outputFile.FileContent), outputFile.FileMode|0600)
 		}
 	}
 
-	absoluteFilepaths, err := findTextFiles(transformedDir)
-	if err != nil {
-		return err
-	}
-	_, err = template.ProcessTemplates(transformedDir, transformedDir, absoluteFilepaths...)
-	if err != nil {
-		return err
-	}
-
-	err = cp.Copy(transformedDir, outputDir)
-	if err != nil {
-		os.RemoveAll(outputDir)
-		return err
-	}
 	return err
 }
 
-func replace(env collections.IDictionary, data string) (string, error) {
-	var output bytes.Buffer
-	tpl, err := template.New("bp").Funcs(sprig.FuncMap()).Parse(data)
-	if err != nil {
-		return "", errors.New("cannot parse file template")
-	}
-	err = tpl.Execute(&output, env)
-	if err != nil {
-		return "", errors.New("cannot replace variables in file template")
-	}
-	return output.String(), err
-}
-
-func findTransformableFiles(dir string) ([]string, error) {
-	files := []string{}
+func findTransformableFiles(dir string) ([]SourceFile, error) {
+	files := []SourceFile{}
 	err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
 		if info.IsDir() && util.Contains(IgnoredDirectories, info.Name()) {
 			return filepath.SkipDir
@@ -274,7 +234,17 @@ func findTransformableFiles(dir string) ([]string, error) {
 				return nil
 			}
 
-			files = append(files, path)
+			relPath := strings.TrimPrefix(path, dir+"/")
+			if isTextfile(path) {
+				fileContent, err := ReadFile(path)
+				if err != nil {
+					return err
+				}
+				fileMode := info.Type().Perm()
+				files = append(files, SourceFile{FilePath: relPath, FileContent: fileContent, FileMode: fileMode})
+			} else {
+				files = append(files, SourceFile{FilePath: relPath, FileContent: ""})
+			}
 		}
 		return nil
 	})
@@ -293,18 +263,4 @@ func isTextfile(path string) bool {
 	}
 
 	return strings.HasPrefix(mtype.String(), "text")
-}
-
-func findTextFiles(dir string) ([]string, error) {
-	files := []string{}
-	err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
-		if !info.IsDir() {
-			if isTextfile(path) && !util.Contains(IgnoredNames, info.Name()) {
-				files = append(files, path)
-			}
-		}
-		return nil
-	})
-
-	return files, err
 }

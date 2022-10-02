@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/BurntSushi/toml v1.0.0
-	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/buildpacks/pack v0.24.1
 	github.com/coveooss/gotemplate/v3 v3.7.2
 	github.com/gabriel-vasile/mimetype v1.4.0
@@ -14,13 +13,13 @@ require (
 	github.com/otiai10/copy v1.7.0
 	github.com/sclevine/spec v1.4.0
 	github.com/spf13/cobra v1.4.0
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 )
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
+	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
@@ -82,6 +81,7 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20211013180041-c96bc1413d57 // indirect
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
