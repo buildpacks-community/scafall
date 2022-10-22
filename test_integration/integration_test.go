@@ -44,14 +44,16 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 					panic(fmt.Errorf("cannot open input template %s", inputTemplate))
 				}
 
-				s := scafall.NewScafall(
+				s, err := scafall.NewScafall(
+					inputTemplate,
 					scafall.WithOutputFolder(outputDir),
 				)
-				sErr := s.Scaffold(inputTemplate)
+				h.AssertNil(t, err)
+				sErr := s.Scaffold()
 				h.AssertNil(t, sErr)
 
 				templateFile := filepath.Join(outputDir, "template.go")
-				_, err := os.Stat(templateFile)
+				_, err = os.Stat(templateFile)
 				h.AssertNil(t, err)
 				data, _ := ioutil.ReadFile(templateFile)
 
@@ -76,11 +78,12 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("renames a templated folder and file", func() {
-			s := scafall.NewScafall(
-				scafall.WithOverrides(map[string]string{"duck": "quack", "crow": "caw"}),
+			s, _ := scafall.NewScafall(
+				"testdata/template_folder",
+				scafall.WithArguments(map[string]string{"duck": "quack", "crow": "caw"}),
 				scafall.WithOutputFolder(outputDir),
 			)
-			s.Scaffold("testdata/template_folder")
+			s.Scaffold()
 
 			templateFile := filepath.Join(outputDir, "quack", "quack.go")
 			_, err := os.Stat(templateFile)
@@ -113,11 +116,12 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("creates a project from a subPath", func() {
-			s := scafall.NewScafall(
+			s, _ := scafall.NewScafall(
+				"testdata/collection",
 				scafall.WithOutputFolder(outputDir),
 				scafall.WithSubPath("two"),
 			)
-			s.Scaffold("testdata/collection")
+			s.Scaffold()
 
 			templateFile := filepath.Join(outputDir, "template.go")
 			_, err := os.Stat(templateFile)
@@ -136,8 +140,8 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			brokenTemplate := "testdata/broken"
 			outputDir, _ := ioutil.TempDir("", "test")
 
-			s := scafall.NewScafall(scafall.WithOutputFolder(outputDir))
-			err := s.Scaffold(brokenTemplate)
+			s, _ := scafall.NewScafall(brokenTemplate, scafall.WithOutputFolder(outputDir))
+			err := s.Scaffold()
 			h.AssertNotNil(t, err)
 
 			templateFile := filepath.Join(outputDir, "template.go")

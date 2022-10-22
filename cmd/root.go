@@ -21,29 +21,33 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := args[0]
 
-			s := scafall.NewScafall()
-			outputDir, err := cmd.Flags().GetString(outputFolderFlag)
-			if err == nil {
-				scafall.WithOutputFolder(outputDir)(&s)
+			s, err := scafall.NewScafall(url)
+			if err != nil {
+				return err
 			}
-			overrides, err := cmd.Flags().GetStringToString(overrideFlag)
+			outputDirVal, err := cmd.Flags().GetString(outputFolderFlag)
 			if err == nil {
-				scafall.WithOverrides(overrides)(&s)
+				scafall.WithOutputFolder(outputDirVal)(&s)
 			}
-			subPath, err := cmd.Flags().GetString(subPath)
+			overridesVal, err := cmd.Flags().GetStringToString(overrideFlag)
 			if err == nil {
-				scafall.WithSubPath(subPath)(&s)
+				scafall.WithArguments(overridesVal)(&s)
+			}
+			subPathVal, err := cmd.Flags().GetString(subPath)
+			if err == nil {
+				scafall.WithSubPath(subPathVal)(&s)
 			}
 
-			return s.Scaffold(url)
+			return s.Scaffold()
 		},
 	}
 )
 
 func init() {
+	rootCmd.AddCommand(argsCmd)
 	rootCmd.Flags().StringP(outputFolderFlag, "p", ".", "scaffold project in the provided output directory")
 	rootCmd.Flags().StringToStringP(overrideFlag, "o", map[string]string{}, "provide overrides as key-value pairs")
-	rootCmd.Flags().StringP(subPath, "s", "", "use sub directory in template project ot scaffold project")
+	rootCmd.Flags().StringP(subPath, "s", "", "use sub directory in template project to scaffold project")
 }
 
 // Execute executes the root command.

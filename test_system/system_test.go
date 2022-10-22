@@ -98,8 +98,8 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 			pwd, _ := os.Getwd()
 			url := filepath.Join(pwd, testFolder)
 
-			s := scafall.NewScafall(scafall.WithOutputFolder(outputDir))
-			err := s.Scaffold(url)
+			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir))
+			err := s.Scaffold()
 			h.AssertNil(t, err)
 
 			bfs := osfs.New(outputDir)
@@ -138,8 +138,8 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 				"NumDigits":     "42",
 			}
 
-			s := scafall.NewScafall(scafall.WithOutputFolder(outputDir), scafall.WithOverrides(overrides))
-			err := s.Scaffold(url)
+			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir), scafall.WithArguments(overrides))
+			err := s.Scaffold()
 			h.AssertNil(t, err)
 
 			bfs := osfs.New(outputDir)
@@ -150,6 +150,46 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 				h.AssertEq(t, fi.Mode()&01000, info.Mode()&01000)
 				return nil
 			})
+		})
+
+		it.After(func() {
+			os.RemoveAll(outputDir)
+		})
+	})
+}
+
+func testArgs(t *testing.T, when spec.G, it spec.S) {
+	when("args command is executed", func() {
+		var (
+			outputDir string
+		)
+
+		it.Before(func() {
+			outputDir, _ = ioutil.TempDir("", "test")
+		})
+
+		it("shows arguments of a project from a URL", func() {
+			url := "http://github.com/AidanDelaney/scafall-python-eg.git"
+
+			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir))
+			_, args, err := s.TemplateArguments()
+			h.AssertNil(t, err)
+
+			h.AssertEq(t, args, []string{
+				"ProjectName (default: pyexample)",
+				"PythonVersion=python3.10, python3.9, python3.8 (default: python3.10)",
+				"NumDigits (default: 3)",
+			})
+		})
+
+		it("shows arguments of a template collection", func() {
+			url := "https://github.com/AidanDelaney/cnb-buildpack-templates"
+
+			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir))
+			_, args, err := s.TemplateArguments()
+			h.AssertNil(t, err)
+
+			h.AssertEq(t, args, []string{"Go", "bash"})
 		})
 
 		it.After(func() {
