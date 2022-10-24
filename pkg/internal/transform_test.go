@@ -27,7 +27,7 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 		prompts   []internal.Prompt
 		text      string
 		expected  collections.IDictionary
-		overrides collections.IDictionary
+		arguments collections.IDictionary
 	}
 	prompt := internal.Prompt{
 		Name:   "Duck",
@@ -42,14 +42,14 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 	testCases := []TestCase{
 		{prompts: []internal.Prompt{prompt}, text: "\n", expected: collections.CreateDictionary().Add("Duck", "")},
 		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack},
-		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack, overrides: duckQuack},
+		{prompts: []internal.Prompt{prompt}, text: "quack\n", expected: duckQuack, arguments: duckQuack},
 		// \x0d is Enter
-		{prompts: []internal.Prompt{prompt}, text: "\x0d", expected: duckQuack, overrides: duckQuack},
+		{prompts: []internal.Prompt{prompt}, text: "\x0d", expected: duckQuack, arguments: duckQuack},
 		// \x1b\x5b\x42 is the terminal escape sequence for down arrow
 		{prompts: []internal.Prompt{selection}, text: "\x0d", expected: collections.CreateDictionary().Add("Duck", "moo")},
 		{prompts: []internal.Prompt{selection}, text: "\x1b\x5b\x42\x0d", expected: duckQuack},
 		{prompts: []internal.Prompt{selection}, text: "\x0d", expected: collections.CreateDictionary().Add("Duck", "moo")},
-		{prompts: []internal.Prompt{selection}, text: "\x1b\x5b\x42\x0d", expected: duckQuack, overrides: duckQuack},
+		{prompts: []internal.Prompt{selection}, text: "\x1b\x5b\x42\x0d", expected: duckQuack, arguments: duckQuack},
 	}
 
 	for _, test := range testCases {
@@ -65,7 +65,7 @@ func testAskPrompts(t *testing.T, when spec.G, it spec.S) {
 
 			it("produces valid prompt values", func() {
 				prompts := internal.Prompts{currentCase.prompts}
-				values, err := internal.AskPrompts(prompts, currentCase.overrides, input)
+				values, err := internal.AskPrompts(prompts, currentCase.arguments, input)
 				h.AssertNil(t, err)
 				h.AssertEq(t, values, currentCase.expected)
 			})

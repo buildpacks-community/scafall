@@ -8,7 +8,7 @@ import (
 
 const (
 	outputFolderFlag = "path"
-	overrideFlag     = "override"
+	argumentsFlag    = "arg"
 	subPath          = "sub-path"
 )
 
@@ -29,9 +29,9 @@ var (
 			if err == nil {
 				scafall.WithOutputFolder(outputDirVal)(&s)
 			}
-			overridesVal, err := cmd.Flags().GetStringToString(overrideFlag)
+			argumentsVal, err := cmd.Flags().GetStringToString(argumentsFlag)
 			if err == nil {
-				scafall.WithArguments(overridesVal)(&s)
+				scafall.WithArguments(argumentsVal)(&s)
 			}
 			subPathVal, err := cmd.Flags().GetString(subPath)
 			if err == nil {
@@ -46,7 +46,7 @@ var (
 func init() {
 	rootCmd.AddCommand(argsCmd)
 	rootCmd.Flags().StringP(outputFolderFlag, "p", ".", "scaffold project in the provided output directory")
-	rootCmd.Flags().StringToStringP(overrideFlag, "o", map[string]string{}, "provide overrides as key-value pairs")
+	rootCmd.Flags().StringToStringP(argumentsFlag, "o", map[string]string{}, "provide overrides as key-value pairs")
 	rootCmd.Flags().StringP(subPath, "s", "", "use sub directory in template project to scaffold project")
 }
 

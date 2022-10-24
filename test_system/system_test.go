@@ -132,13 +132,13 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 
 		it("scaffolds a project from a URL ", func() {
 			url := "http://github.com/AidanDelaney/scafall-python-eg.git"
-			overrides := map[string]string{
+			arguments := map[string]string{
 				"ProjectName":   "quack",
 				"PythonVersion": "python3.10",
 				"NumDigits":     "42",
 			}
 
-			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir), scafall.WithArguments(overrides))
+			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir), scafall.WithArguments(arguments))
 			err := s.Scaffold()
 			h.AssertNil(t, err)
 

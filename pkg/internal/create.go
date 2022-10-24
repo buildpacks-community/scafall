@@ -9,8 +9,6 @@ import (
 	"github.com/coveooss/gotemplate/v3/collections"
 	git "github.com/go-git/go-git/v5"
 	cp "github.com/otiai10/copy"
-
-	"github.com/AidanDelaney/scafall/pkg/internal/util"
 )
 
 // Present a local directory or a git repo as a Filesystem
@@ -35,7 +33,7 @@ func URLToFs(url string, subPath string, tmpDir string) (string, error) {
 	return requestedSubPath, nil
 }
 
-func Create(inputDir string, overrides map[string]string, targetDir string) error {
+func Create(inputDir string, arguments map[string]string, targetDir string) error {
 	var values collections.IDictionary
 	promptFile := filepath.Join(inputDir, PromptFile)
 
@@ -45,7 +43,7 @@ func Create(inputDir string, overrides map[string]string, targetDir string) erro
 		if err != nil {
 			return err
 		}
-		overridesDict := util.ToIDictionary(overrides)
+		overridesDict := collections.AsDictionary(arguments)
 		overridesFile := filepath.Join(inputDir, OverrideFile)
 		if _, err := os.Stat(overridesFile); err == nil {
 			os, err := ReadOverrides(overridesFile)

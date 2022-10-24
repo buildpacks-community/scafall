@@ -88,14 +88,14 @@ func AskQuestion(question string, choices []string, input io.ReadCloser) (string
 	return result, err
 }
 
-func AskPrompts(prompts Prompts, overrides collections.IDictionary, input io.ReadCloser) (collections.IDictionary, error) {
-	if overrides == nil {
-		overrides = collections.CreateDictionary()
+func AskPrompts(prompts Prompts, arguments collections.IDictionary, input io.ReadCloser) (collections.IDictionary, error) {
+	if arguments == nil {
+		arguments = collections.CreateDictionary()
 	}
 	values := collections.CreateDictionary()
 	for _, prompt := range prompts.Prompts {
-		if overrides.Has(prompt.Name) {
-			values.Set(prompt.Name, overrides.Get(prompt.Name))
+		if arguments.Has(prompt.Name) {
+			values.Set(prompt.Name, arguments.Get(prompt.Name))
 			continue
 		}
 

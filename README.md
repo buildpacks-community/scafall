@@ -1,5 +1,14 @@
 # scafall
 
+[![Build results](https://github.com/buildpacks/scafall/workflows/build/badge.svg)](https://github.com/buildpacks/scafall/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/buildpacks/scafall)](https://goreportcard.com/report/github.com/buildpacks/scafall)
+[![codecov](https://codecov.io/gh/buildpacks/scafall/branch/main/graph/badge.svg)](https://codecov.io/gh/buildpacks/scafall)
+[![GoDoc](https://godoc.org/github.com/buildpacks/scafall?status.svg)](https://godoc.org/github.com/buildpacks/scafall)
+[![GitHub license](https://img.shields.io/github/license/buildpacks/scafall)](https://github.com/buildpacks/scafall/blob/main/LICENSE)
+[![Slack](https://img.shields.io/badge/slack-join-ff69b4.svg?logo=slack)](https://slack.cncf.io/)
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/buildpacks/scafall)
+
+
 A project scaffolding tool inspired by [cookiecutter](https://github.com/cookiecutter/cookiecutter).
 
 ## Problem
