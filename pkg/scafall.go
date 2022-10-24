@@ -107,7 +107,7 @@ func (s Scafall) Scaffold() error {
 	return internal.Create(inFs, s.Arguments, s.OutputFolder)
 }
 
-// Arguments returns a list of variable names that can be passed to the template
+// TemplateArguments returns a list of variable names that can be passed to the template
 func (s Scafall) TemplateArguments() (string, []string, error) {
 	inFs, err := clone(s)
 	if err != nil {
