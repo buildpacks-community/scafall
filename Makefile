@@ -3,8 +3,9 @@ GOCMD?=go
 CODE_COVERAGE_FILE:= coverage
 CODE_COVERAGE_FILE_TXT := $(CODE_COVERAGE_FILE).txt
 PACKAGE_BASE=github.com/AidanDelaney/scafall
+SRC=$(shell find . -type f -name '*.go' -not -path "*/testdata/*")
 
-all: build test
+all: build verify test
 
 build:
 	go build -o scafall main.go
@@ -33,9 +34,15 @@ install-goimports:
 	@echo "> Installing goimports..."
 	cd tools && $(GOCMD) install golang.org/x/tools/cmd/goimports
 
+verify-format: install-goimports
+	@echo "> Formating code..."
+	@goimports -l -local ${PACKAGE_BASE} ${SRC}
+
 format: install-goimports
 	@echo "> Formating code..."
-	@goimports -l -w -local ${PACKAGE_BASE} -v -srcdir . .
+	@goimports -l -w -local ${PACKAGE_BASE} ${SRC}
 
 lint: install-golangci-lint
 	golangci-lint run
+
+verify: lint verify-format

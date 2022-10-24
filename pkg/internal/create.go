@@ -33,8 +33,9 @@ func URLToFs(url string, subPath string, tmpDir string) (string, error) {
 	return requestedSubPath, nil
 }
 
+// Create a new source project in targetDir
 func Create(inputDir string, arguments map[string]string, targetDir string) error {
-	var values collections.IDictionary
+	values := collections.AsDictionary(arguments)
 	promptFile := filepath.Join(inputDir, PromptFile)
 
 	// Create prompts and merge any overrides

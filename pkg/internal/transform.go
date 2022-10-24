@@ -25,9 +25,8 @@ const (
 )
 
 var (
-	ReservedPromptVariables = []string{}
-	IgnoredNames            = []string{PromptFile, OverrideFile}
-	IgnoredDirectories      = []string{".git", "node_modules"}
+	IgnoredNames       = []string{PromptFile, OverrideFile}
+	IgnoredDirectories = []string{".git", "node_modules"}
 )
 
 type Prompt struct {
@@ -142,10 +141,6 @@ func ReadPromptFile(promptFile string) (Prompts, error) {
 	}
 
 	for _, prompt := range prompts.Prompts {
-		if util.Contains(ReservedPromptVariables, prompt.Name) {
-			return prompts, fmt.Errorf("%s file contains reserved variable: %s", promptFile, prompt.Name)
-		}
-
 		if prompt.Name == "" || prompt.Prompt == "" {
 			return prompts, fmt.Errorf("%s file contains prompt with missing name or prompt required field", promptFile)
 		}
@@ -172,9 +167,6 @@ func ReadOverrides(overrideFile string) (collections.IDictionary, error) {
 
 	oDict := collections.CreateDictionary()
 	for k, v := range overrides {
-		if util.Contains(ReservedPromptVariables, k) {
-			return nil, fmt.Errorf("%s file contains reserved variable: %s", overrideFile, k)
-		}
 		oDict.Add(k, v)
 	}
 
