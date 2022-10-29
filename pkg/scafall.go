@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/AidanDelaney/scafall/pkg/internal"
+
+	"github.com/AlecAivazis/survey/v2"
 )
 
 // Scafall allows programmatic control over the default values for variables.
@@ -20,8 +22,7 @@ type Scafall struct {
 	Arguments    map[string]string
 	OutputFolder string
 	SubPath      string
-	tmpDir       string
-	cloned       string
+	CloneCache   string
 }
 
 type Option func(*Scafall)
@@ -64,67 +65,70 @@ func NewScafall(url string, opts ...Option) (Scafall, error) {
 		opt(&s)
 	}
 
-	if s.tmpDir == "" {
-		tmpDir, err := os.MkdirTemp("", "scafall")
-		if err != nil {
-			return Scafall{}, err
-		}
-		s.tmpDir = tmpDir
-	}
-
 	return s, nil
-}
-
-func clone(s Scafall) (string, error) {
-	if s.cloned != "" {
-		return s.cloned, nil
-	}
-	fs, err := internal.URLToFs(s.URL, s.SubPath, s.tmpDir)
-	if err != nil {
-		return "", err
-	}
-	s.cloned = fs
-	return fs, err
 }
 
 // Scaffold accepts url containing project templates and creates an output
 // project.  The url can either point to a project template or a collection of
 // project templates.
 func (s Scafall) Scaffold() error {
-	inFs, err := clone(s)
+	err := s.clone()
 	if err != nil {
+		s.cleanUp()
 		return err
 	}
-
+	inFs := s.CloneCache
 	if isCollection, choices := internal.IsCollection(inFs); isCollection {
-		template, err := internal.AskQuestion("choose a project template", choices, os.Stdin)
+		question := survey.Select{
+			Message: "choose a project template",
+			Options: choices,
+		}
+		response := struct {
+			Template string
+		}{
+			Template: "",
+		}
+		err := survey.AskOne(&question, response, survey.WithValidator(survey.Required))
 		if err != nil {
+			s.cleanUp()
 			return err
 		}
-		inFs = path.Join(inFs, template)
+		inFs = path.Join(s.CloneCache, response.Template)
 	}
 
-	return internal.Create(inFs, s.Arguments, s.OutputFolder)
+	err = internal.Create(inFs, s.Arguments, s.OutputFolder)
+	if err != nil {
+		s.cleanUp()
+	}
+
+	return err
 }
 
 // TemplateArguments returns a list of variable names that can be passed to the template
 func (s Scafall) TemplateArguments() (string, []string, error) {
-	inFs, err := clone(s)
+	err := s.clone()
 	if err != nil {
 		return "", nil, err
 	}
-
+	inFs := s.CloneCache
 	if isCollection, choices := internal.IsCollection(inFs); isCollection {
 		return "templates available in collection", choices, nil
 	}
 
 	promptFile := filepath.Join(inFs, internal.PromptFile)
-	ps, err := internal.ReadPromptFile(promptFile)
+	p, err := os.Open(promptFile)
 	if err != nil {
-		return "could not detect valid prompts", nil, err
+		s.cleanUp()
+		return "", nil, err
 	}
-	argsStrings := make([]string, len(ps.Prompts))
-	for i, p := range ps.Prompts {
+	template, err := internal.NewTemplate(p, nil, nil)
+	if err != nil {
+		s.cleanUp()
+		return "", nil, err
+	}
+	prompts := template.Arguments()
+	argsStrings := make([]string, len(prompts))
+	for i, p := range prompts {
 		if len(p.Choices) == 0 {
 			argsStrings[i] = fmt.Sprintf("%s (default: %s)", p.Name, p.Default)
 		} else {
@@ -133,4 +137,28 @@ func (s Scafall) TemplateArguments() (string, []string, error) {
 		}
 	}
 	return "arguments offered by template", argsStrings, nil
+}
+
+func (s *Scafall) cleanUp() {
+	s.CloneCache = ""
+	os.RemoveAll(s.CloneCache)
+	os.RemoveAll(s.OutputFolder)
+}
+
+func (s *Scafall) clone() error {
+	if s.CloneCache != "" {
+		return nil
+	}
+
+	tmpDir, err := os.MkdirTemp("", "scafall")
+	if err != nil {
+		return err
+	}
+
+	fs, err := internal.URLToFs(s.URL, s.SubPath, tmpDir)
+	if err != nil {
+		return err
+	}
+	s.CloneCache = fs
+	return nil
 }

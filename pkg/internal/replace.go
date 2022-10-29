@@ -4,16 +4,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/coveooss/gotemplate/v3/collections"
 	t "github.com/coveooss/gotemplate/v3/template"
 )
 
-func replaceUnknownVars(vars collections.IDictionary, content string) string {
+func replaceUnknownVars(vars map[string]string, content string) string {
 	regex := regexp.MustCompile(`{{[ \t]*\.\w+`)
 	transformed := content
 	for _, token := range regex.FindAllString(content, -1) {
 		candidate := strings.Split(token, ".")[1]
-		if !vars.Has(candidate) {
+		if _, exists := vars[candidate]; !exists {
 			// replace "{{\s*.candidate" with "{&{&\s*.candidate"
 			replacement := strings.Replace(token, "{{", ReplacementDelimiter, 1)
 			transformed = strings.ReplaceAll(transformed, token, replacement)
@@ -22,7 +21,7 @@ func replaceUnknownVars(vars collections.IDictionary, content string) string {
 	return transformed
 }
 
-func Replace(vars collections.IDictionary, file SourceFile) (SourceFile, error) {
+func Replace(vars map[string]string, file SourceFile) (SourceFile, error) {
 	opts := t.DefaultOptions().
 		Set(t.Overwrite, t.Sprig, t.StrictErrorCheck, t.AcceptNoValue).
 		Unset(t.Razor)

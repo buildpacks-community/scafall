@@ -1,19 +1,15 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/coveooss/gotemplate/v3/collections"
 
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/manifoldco/promptui"
 
 	"github.com/AidanDelaney/scafall/pkg/internal/util"
 )
@@ -29,98 +25,6 @@ var (
 	IgnoredDirectories = []string{".git", "node_modules"}
 )
 
-type Prompt struct {
-	Name     string   `toml:"name" binding:"required"`
-	Prompt   string   `toml:"prompt" binding:"required"`
-	Required bool     `toml:"required"`
-	Default  string   `toml:"default"`
-	Choices  []string `toml:"choices,omitempty"`
-}
-
-type Prompts struct {
-	Prompts []Prompt `toml:"prompt"`
-}
-
-func requireNonEmptyString(s string) error {
-	if s == "" {
-		return errors.New("please provide a non-empty value")
-	}
-	return nil
-}
-
-func requireID(s string) error {
-	return nil
-}
-
-func PreparePrompt(prompt Prompt, input io.ReadCloser) (promptui.Prompt, error) {
-	var validateFunc promptui.ValidateFunc = requireID
-	var defaultValue = prompt.Default
-	if prompt.Required {
-		validateFunc = requireNonEmptyString
-	}
-	p := promptui.Prompt{
-		Label:    prompt.Prompt,
-		Default:  defaultValue,
-		Validate: validateFunc,
-		Stdin:    input,
-	}
-	return p, nil
-}
-
-func PrepareChoices(prompt Prompt, input io.ReadCloser) (promptui.Select, error) {
-	var choices = prompt.Choices
-	p := promptui.Select{
-		Label: prompt.Prompt,
-		Items: choices,
-		Stdin: input,
-	}
-	return p, nil
-}
-
-func AskQuestion(question string, choices []string, input io.ReadCloser) (string, error) {
-	prompt := promptui.Select{
-		Label: question,
-		Items: choices,
-		Stdin: input,
-	}
-	_, result, err := prompt.Run()
-	return result, err
-}
-
-func AskPrompts(prompts Prompts, arguments collections.IDictionary, input io.ReadCloser) (collections.IDictionary, error) {
-	if arguments == nil {
-		arguments = collections.CreateDictionary()
-	}
-	values := collections.CreateDictionary()
-	for _, prompt := range prompts.Prompts {
-		if arguments.Has(prompt.Name) {
-			values.Set(prompt.Name, arguments.Get(prompt.Name))
-			continue
-		}
-
-		var result string
-		var err error
-
-		if prompt.Choices == nil || len(prompt.Choices) == 0 {
-			p, prepErr := PreparePrompt(prompt, input)
-			if prepErr != nil {
-				return nil, prepErr
-			}
-			result, err = p.Run()
-		} else {
-			p, prepErr := PrepareChoices(prompt, input)
-			if prepErr != nil {
-				return nil, prepErr
-			}
-			_, result, err = p.Run()
-		}
-		if err == nil {
-			values.Set(prompt.Name, result)
-		}
-	}
-	return values, nil
-}
-
 func ReadFile(path string) (string, error) {
 	buf, err := os.ReadFile(path)
 	if err != nil {
@@ -129,31 +33,11 @@ func ReadFile(path string) (string, error) {
 	return string(buf), nil
 }
 
-func ReadPromptFile(promptFile string) (Prompts, error) {
-	prompts := Prompts{}
-	promptData, err := ReadFile(promptFile)
-	if err != nil {
-		return prompts, err
-	}
-
-	if _, err := toml.Decode(promptData, &prompts); err != nil {
-		return prompts, fmt.Errorf("%s file does not match required format: %s", promptFile, err)
-	}
-
-	for _, prompt := range prompts.Prompts {
-		if prompt.Name == "" || prompt.Prompt == "" {
-			return prompts, fmt.Errorf("%s file contains prompt with missing name or prompt required field", promptFile)
-		}
-	}
-
-	return prompts, nil
-}
-
-func ReadOverrides(overrideFile string) (collections.IDictionary, error) {
+func ReadOverrides(overrideFile string) (map[string]string, error) {
 	var overrides map[string]string
 	// if no override file
 	if _, err := os.Stat(overrideFile); err != nil {
-		return collections.CreateDictionary(), nil
+		return nil, nil
 	}
 
 	overrideData, err := ReadFile(overrideFile)
@@ -165,12 +49,7 @@ func ReadOverrides(overrideFile string) (collections.IDictionary, error) {
 		return nil, fmt.Errorf("%s file does not match required format: %s", overrideFile, err)
 	}
 
-	oDict := collections.CreateDictionary()
-	for k, v := range overrides {
-		oDict.Add(k, v)
-	}
-
-	return oDict, nil
+	return overrides, nil
 }
 
 type SourceFile struct {
@@ -179,33 +58,44 @@ type SourceFile struct {
 	FileMode    fs.FileMode
 }
 
-func Apply(inputDir string, vars collections.IDictionary, outputDir string) error {
+func (s SourceFile) Transform(inputDir string, outputDir string, vars map[string]string) error {
+	outputFile, err := Replace(vars, s)
+	if err != nil {
+		return err
+	}
+
+	dstDir := filepath.Join(outputDir, filepath.Dir(outputFile.FilePath))
+	mkdirErr := os.MkdirAll(dstDir, 0744)
+	if mkdirErr != nil {
+		return fmt.Errorf("failed to create target directory %s", dstDir)
+	}
+
+	outputPath := filepath.Join(outputDir, outputFile.FilePath)
+	if outputFile.FileContent == "" {
+		inputPath := filepath.Join(inputDir, s.FilePath)
+		mvErr := os.Rename(inputPath, outputPath)
+		if mvErr != nil {
+			return fmt.Errorf("failed to rename %s to %s", s.FilePath, outputFile.FilePath)
+		}
+	} else {
+		os.WriteFile(outputPath, []byte(outputFile.FileContent), outputFile.FileMode|0600)
+	}
+	return nil
+}
+
+func Apply(inputDir string, vars map[string]string, outputDir string) error {
+	if vars == nil {
+		vars = map[string]string{}
+	}
 	files, err := findTransformableFiles(inputDir)
 	if err != nil {
 		return fmt.Errorf("failed to find files in input folder: %s %s", inputDir, err)
 	}
 
 	for _, file := range files {
-		outputFile, err := Replace(vars, file)
+		err := file.Transform(inputDir, outputDir, vars)
 		if err != nil {
-			return err
-		}
-
-		dstDir := filepath.Join(outputDir, filepath.Dir(outputFile.FilePath))
-		mkdirErr := os.MkdirAll(dstDir, 0744)
-		if mkdirErr != nil {
-			return fmt.Errorf("failed to create target directory %s", dstDir)
-		}
-
-		outputPath := filepath.Join(outputDir, outputFile.FilePath)
-		if outputFile.FileContent == "" {
-			inputPath := filepath.Join(inputDir, file.FilePath)
-			mvErr := os.Rename(inputPath, outputPath)
-			if mvErr != nil {
-				return fmt.Errorf("failed to rename %s to %s", file.FilePath, outputFile.FilePath)
-			}
-		} else {
-			os.WriteFile(outputPath, []byte(outputFile.FileContent), outputFile.FileMode|0600)
+			return fmt.Errorf("failed to transform %s: %s", file.FilePath, err)
 		}
 	}
 

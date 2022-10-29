@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	h "github.com/buildpacks/pack/testhelpers"
-	"github.com/coveooss/gotemplate/v3/collections"
 	"github.com/sclevine/spec"
 
 	"github.com/AidanDelaney/scafall/pkg/internal"
@@ -13,19 +12,19 @@ import (
 func testReplace(t *testing.T, when spec.G, it spec.S) {
 	type TestCase struct {
 		file         internal.SourceFile
-		vars         collections.IDictionary
+		vars         map[string]string
 		expectedName string
 	}
 
 	testCases := []TestCase{
 		{
 			internal.SourceFile{FilePath: "{{.Foo}}", FileContent: ""},
-			collections.CreateDictionary().Add("Foo", "Bar"),
+			map[string]string{"Foo": "Bar"},
 			"Bar",
 		},
 		{
 			internal.SourceFile{FilePath: "{{.Foo}}"},
-			collections.CreateDictionary().Add("Bar", "Bar"),
+			map[string]string{"Bar": "Bar"},
 			"{{.Foo}}",
 		},
 	}

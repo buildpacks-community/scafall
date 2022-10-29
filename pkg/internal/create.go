@@ -6,7 +6,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/coveooss/gotemplate/v3/collections"
 	git "github.com/go-git/go-git/v5"
 	cp "github.com/otiai10/copy"
 )
@@ -35,35 +34,42 @@ func URLToFs(url string, subPath string, tmpDir string) (string, error) {
 
 // Create a new source project in targetDir
 func Create(inputDir string, arguments map[string]string, targetDir string) error {
-	values := collections.AsDictionary(arguments)
 	promptFile := filepath.Join(inputDir, PromptFile)
+	var template Template
 
-	// Create prompts and merge any overrides
-	if _, err := os.Stat(promptFile); err == nil {
-		prompts, err := ReadPromptFile(promptFile)
+	overridesFile := filepath.Join(inputDir, OverrideFile)
+	overrides := map[string]string{}
+	if _, err := os.Stat(overridesFile); err == nil {
+		overrides, err = ReadOverrides(overridesFile)
 		if err != nil {
 			return err
 		}
-		overridesDict := collections.AsDictionary(arguments)
-		overridesFile := filepath.Join(inputDir, OverrideFile)
-		if _, err := os.Stat(overridesFile); err == nil {
-			os, err := ReadOverrides(overridesFile)
-			overridesDict = overridesDict.Merge(os)
-			if err != nil {
-				return err
-			}
-		}
-
-		values, err = AskPrompts(prompts, overridesDict, os.Stdin)
-		if err != nil {
-			return err
-		}
-		values = values.Merge(overridesDict)
 	}
 
-	errApply := Apply(inputDir, values, targetDir)
-	if errApply != nil {
-		return fmt.Errorf("failed to load new project skeleton: %s", errApply)
+	if _, ok := os.Stat(promptFile); ok == nil {
+		p, err := os.Open(promptFile)
+		if err != nil {
+			return err
+		}
+		template, err = NewTemplate(p, arguments, overrides)
+		if err != nil {
+			return err
+		}
+	} else {
+		var err error
+		template, err = NewTemplate(nil, arguments, overrides)
+		if err != nil {
+			return err
+		}
+	}
+
+	values, err := template.Ask()
+	if err != nil {
+		return fmt.Errorf("failed to prompt for values: %s", err)
+	}
+	err = Apply(inputDir, values, targetDir)
+	if err != nil {
+		return fmt.Errorf("failed to scaffold new project: %s", err)
 	}
 
 	return nil

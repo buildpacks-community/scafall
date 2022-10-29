@@ -49,8 +49,8 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 					scafall.WithOutputFolder(outputDir),
 				)
 				h.AssertNil(t, err)
-				sErr := s.Scaffold()
-				h.AssertNil(t, sErr)
+				err = s.Scaffold()
+				h.AssertNil(t, err)
 
 				templateFile := filepath.Join(outputDir, "template.go")
 				_, err = os.Stat(templateFile)
@@ -136,7 +136,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("An invalid template is passed", func() {
-		it("does not output a project", func() {
+		it("reports template errors and does not output a project", func() {
 			brokenTemplate := "testdata/broken"
 			outputDir, _ := ioutil.TempDir("", "test")
 
