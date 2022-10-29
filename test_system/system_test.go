@@ -13,7 +13,7 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sclevine/spec"
 
-	scafall "github.com/AidanDelaney/scafall/pkg"
+	scafall "github.com/buildpacks/scafall/pkg"
 )
 
 // walk recursively descends path, calling walkFn

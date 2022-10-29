@@ -127,11 +127,8 @@ func (t TemplateImpl) Ask(opts ...survey.AskOpt) (map[string]string, error) {
 		case "OptionAnswer":
 			oa := value.(survey.OptionAnswer)
 			answers[key] = oa.Value
-			break
-
 		case "string":
 			answers[key] = value.(string)
-			break
 		default:
 			return nil, fmt.Errorf("unrecognized anwere type %s", n)
 		}

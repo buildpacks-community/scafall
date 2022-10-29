@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/AidanDelaney/scafall/pkg/internal"
+	"github.com/buildpacks/scafall/pkg/internal"
 
 	h "github.com/buildpacks/pack/testhelpers"
 	"github.com/sclevine/spec"

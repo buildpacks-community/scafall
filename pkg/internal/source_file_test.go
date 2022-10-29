@@ -6,7 +6,7 @@ import (
 	h "github.com/buildpacks/pack/testhelpers"
 	"github.com/sclevine/spec"
 
-	"github.com/AidanDelaney/scafall/pkg/internal"
+	"github.com/buildpacks/scafall/pkg/internal"
 )
 
 func testReplace(t *testing.T, when spec.G, it spec.S) {
@@ -32,7 +32,7 @@ func testReplace(t *testing.T, when spec.G, it spec.S) {
 		current := testCase
 		when("variable replacement is called", func() {
 			it("correctly replaces tokens", func() {
-				output, err := internal.Replace(current.vars, current.file)
+				output, err := current.file.Replace(current.vars)
 				h.AssertNil(t, err)
 				h.AssertEq(t, output.FilePath, current.expectedName)
 			})

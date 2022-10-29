@@ -10,7 +10,7 @@ import (
 	h "github.com/buildpacks/pack/testhelpers"
 	"github.com/sclevine/spec"
 
-	scafall "github.com/AidanDelaney/scafall/pkg"
+	scafall "github.com/buildpacks/scafall/pkg"
 )
 
 func testIntegration(t *testing.T, when spec.G, it spec.S) {

@@ -1,4 +1,4 @@
-module github.com/AidanDelaney/scafall
+module github.com/buildpacks/scafall
 
 go 1.18
 

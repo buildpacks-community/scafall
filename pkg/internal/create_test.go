@@ -8,7 +8,7 @@ import (
 	h "github.com/buildpacks/pack/testhelpers"
 	"github.com/sclevine/spec"
 
-	"github.com/AidanDelaney/scafall/pkg/internal"
+	"github.com/buildpacks/scafall/pkg/internal"
 )
 
 func testCreate(t *testing.T, when spec.G, it spec.S) {

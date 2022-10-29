@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/AidanDelaney/scafall/cmd"
+	"github.com/buildpacks/scafall/cmd"
 )
 
 func main() {

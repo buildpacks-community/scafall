@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/gabriel-vasile/mimetype"
 
-	"github.com/AidanDelaney/scafall/pkg/internal/util"
+	"github.com/buildpacks/scafall/pkg/internal/util"
 )
 
 const (
@@ -50,37 +49,6 @@ func ReadOverrides(overrideFile string) (map[string]string, error) {
 	}
 
 	return overrides, nil
-}
-
-type SourceFile struct {
-	FilePath    string
-	FileContent string
-	FileMode    fs.FileMode
-}
-
-func (s SourceFile) Transform(inputDir string, outputDir string, vars map[string]string) error {
-	outputFile, err := Replace(vars, s)
-	if err != nil {
-		return err
-	}
-
-	dstDir := filepath.Join(outputDir, filepath.Dir(outputFile.FilePath))
-	mkdirErr := os.MkdirAll(dstDir, 0744)
-	if mkdirErr != nil {
-		return fmt.Errorf("failed to create target directory %s", dstDir)
-	}
-
-	outputPath := filepath.Join(outputDir, outputFile.FilePath)
-	if outputFile.FileContent == "" {
-		inputPath := filepath.Join(inputDir, s.FilePath)
-		mvErr := os.Rename(inputPath, outputPath)
-		if mvErr != nil {
-			return fmt.Errorf("failed to rename %s to %s", s.FilePath, outputFile.FilePath)
-		}
-	} else {
-		os.WriteFile(outputPath, []byte(outputFile.FileContent), outputFile.FileMode|0600)
-	}
-	return nil
 }
 
 func Apply(inputDir string, vars map[string]string, outputDir string) error {
