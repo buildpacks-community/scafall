@@ -3,9 +3,9 @@ package internal
 import (
 	"fmt"
 	"io"
-	"reflect"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/BurntSushi/toml"
 )
 
@@ -120,18 +120,9 @@ func (t TemplateImpl) Ask(opts ...survey.AskOpt) (map[string]string, error) {
 
 	answers := make(map[string]string, len(response))
 	for key, value := range response {
-		v := reflect.ValueOf(value)
-		n := v.Type().Name()
-
-		switch n {
-		case "OptionAnswer":
-			oa := value.(survey.OptionAnswer)
-			answers[key] = oa.Value
-		case "string":
-			answers[key] = value.(string)
-		default:
-			return nil, fmt.Errorf("unrecognized anwere type %s", n)
-		}
+		val := ""
+		core.WriteAnswer(&val, key, value)
+		answers[key] = val
 	}
 	for key, value := range t.TArguments {
 		answers[key] = value
