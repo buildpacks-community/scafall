@@ -7,6 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/BurntSushi/toml"
+	"github.com/pkg/errors"
 )
 
 type Prompt struct {
@@ -78,14 +79,14 @@ func NewTemplate(promptFile io.ReadCloser, arguments map[string]string, override
 		}
 
 		if _, err := toml.Decode(string(promptData), &prompts); err != nil {
-			return nil, fmt.Errorf("%s file does not match required format: %s", promptFile, err)
+			return nil, errors.Wrap(err, fmt.Sprintf("%s file does not match required format", promptFile))
 		}
 	}
 
 	questions := make([]*survey.Question, 0)
 	for _, prompt := range prompts.Prompts {
 		if prompt.Name == "" || prompt.Prompt == "" {
-			return nil, fmt.Errorf("%s file contains prompt with missing name or prompt required field", promptFile)
+			return nil, fmt.Errorf("%s file contains prompt with missing required field; name or prompt required", promptFile)
 		}
 
 		// Remove question from survey if an argument has been provided

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/pkg/errors"
 
 	"github.com/gabriel-vasile/mimetype"
 
@@ -45,7 +46,7 @@ func ReadOverrides(overrideFile string) (map[string]string, error) {
 	}
 
 	if _, err := toml.Decode(overrideData, &overrides); err != nil {
-		return nil, fmt.Errorf("%s file does not match required format: %s", overrideFile, err)
+		return nil, errors.Wrap(err, fmt.Sprintf("%s file does not match required format", overrideFile))
 	}
 
 	return overrides, nil
@@ -63,7 +64,7 @@ func Apply(inputDir string, vars map[string]string, outputDir string) error {
 	for _, file := range files {
 		err := file.Transform(inputDir, outputDir, vars)
 		if err != nil {
-			return fmt.Errorf("failed to transform %s: %s", file.FilePath, err)
+			return errors.Wrap(err, fmt.Sprintf("failed to transform %s", file.FilePath))
 		}
 	}
 

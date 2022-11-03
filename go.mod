@@ -14,6 +14,7 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/hinshun/vt10x v0.0.0-20220119200601-820417d04eec
 	github.com/otiai10/copy v1.7.0
+	github.com/pkg/errors v0.9.1
 	github.com/sclevine/spec v1.4.0
 	github.com/spf13/cobra v1.4.0
 )
@@ -72,7 +73,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect

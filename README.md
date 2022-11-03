@@ -15,12 +15,14 @@ A project scaffolding tool inspired by [cookiecutter](https://github.com/cookiec
 
 We needed a tool to create new source code projects from templates.  In addition, we needed the tool to be a libaray written in [Go](https://go.dev/).  Scafall takes project templates, asks the end-user some questions and produces an output folder.
 
+Scafall differs from some other Go scaffolding/templating tools as it passes through unknown template subsitutions.  For example, if your input application source or documentation contains a `{{.Foo}}` template and no argument is provided (either programmatically or by the end-user) then the output file will contain the string `{{.Foo}}`.  This allows the generation of projects where the generated source contains templates.
+
 ## Installation and CLI
 
 As a Go developer you can install `scafall` into your `GOBIN` directory.
 
 ```bash
-$ go install github.com/AidanDelaney/scafall@latest
+$ go install github.com/buildpacks/scafall@latest
 ```
 
 The `scafall` CLI should now be available for use
@@ -28,8 +30,7 @@ The `scafall` CLI should now be available for use
 ```bash
 $ scafall http://github.com/AidanDelaney/scafall-python-eg.git
 ✔ Please input a project name: pyexample
-Use the arrow keys to navigate: ↓ ↑ → ←
-? Which Python version to use:
+? Which Python version to use: [Use arrows to move, type to filter]
   ▸ python3.10
     python3.9
     python3.8
@@ -40,7 +41,7 @@ $ ./print_pi.py
 
 ## Programmatic Usage
 
-The programmatic API is documented on [`pkg.go.dev`](https://pkg.go.dev/github.com/AidanDelaney/scafall), which contains more examples.  A basic example will prompt the end-user for any values the project scaffolding requires:
+The programmatic API is documented on [`pkg.go.dev`](https://pkg.go.dev/github.com/buildpacks/scafall), which contains more examples.  A basic example will prompt the end-user for any values the project scaffolding requires:
 
 ```go
 package main
@@ -48,7 +49,7 @@ package main
 import (
   "fmt"
 
-  scafall "github.com/AidanDelaney/scafall/pkg"
+  scafall "github.com/buildpacks/scafall/pkg"
 )
 
 func main() {
@@ -72,7 +73,7 @@ Project templates are normal source code projects with the addition of a `prompt
 
 ```bash
 $ scafall http://github.com/AidanDelaney/scafall-python-eg.git
-? Which Python version to use:
+? Which Python version to use: [Use arrows to move, type to filter]
   ▸ python3.10
     python3.9
     python3.8

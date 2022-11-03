@@ -78,10 +78,10 @@ func (s Scafall) Scaffold() error {
 		return err
 	}
 	inFs := s.CloneCache
-	if isCollection, choices := internal.IsCollection(inFs); isCollection {
+	if isCollection, options := internal.IsCollection(inFs); isCollection {
 		question := survey.Select{
 			Message: "choose a project template",
-			Options: choices,
+			Options: options,
 		}
 		response := struct {
 			Template string

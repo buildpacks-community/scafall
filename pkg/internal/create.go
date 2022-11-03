@@ -8,6 +8,7 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	cp "github.com/otiai10/copy"
+	"github.com/pkg/errors"
 )
 
 // Present a local directory or a git repo as a Filesystem
@@ -65,11 +66,11 @@ func Create(inputDir string, arguments map[string]string, targetDir string) erro
 
 	values, err := template.Ask()
 	if err != nil {
-		return fmt.Errorf("failed to prompt for values: %s", err)
+		return errors.Wrap(err, "failed to prompt for values")
 	}
 	err = Apply(inputDir, values, targetDir)
 	if err != nil {
-		return fmt.Errorf("failed to scaffold new project: %s", err)
+		return errors.Wrap(err, "failed to scaffold new project")
 	}
 
 	return nil

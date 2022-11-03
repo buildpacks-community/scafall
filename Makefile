@@ -2,7 +2,7 @@
 GOCMD?=go
 CODE_COVERAGE_FILE:= coverage
 CODE_COVERAGE_FILE_TXT := $(CODE_COVERAGE_FILE).txt
-PACKAGE_BASE=github.com/AidanDelaney/scafall
+PACKAGE_BASE=github.com/buildpacks/scafall
 SRC=$(shell find . -type f -name '*.go' -not -path "*/testdata/*")
 
 all: build verify test
