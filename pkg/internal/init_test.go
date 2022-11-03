@@ -15,4 +15,5 @@ func TestIternal(t *testing.T) {
 	spec.Run(t, "AskPrompts", testAskPrompts, spec.Report(report.Terminal{}))
 	spec.Run(t, "NoArgument", testApplyNoArgument, spec.Report(report.Terminal{}))
 	spec.Run(t, "Replace", testReplace, spec.Report(report.Terminal{}))
+	spec.Run(t, "Transform", testTransform, spec.Report(report.Terminal{}))
 }

@@ -40,5 +40,21 @@ func testCreate(t *testing.T, when spec.G, it spec.S) {
 			h.AssertNil(t, err)
 			h.AssertEq(t, string(buf), "quack")
 		})
+
+		when("a prompt.toml file is present", func() {
+			it.Before(func() {
+				_, err := os.Create(filepath.Join(inputDir, "prompts.toml"))
+				h.AssertNil(t, err)
+			})
+
+			it("reads prompt.toml and creates valid output", func() {
+				err := internal.Create(inputDir, map[string]string{"Test": "quack"}, targetDir)
+				h.AssertNil(t, err)
+
+				buf, err := os.ReadFile(filepath.Join(targetDir, "test.md"))
+				h.AssertNil(t, err)
+				h.AssertEq(t, string(buf), "quack")
+			})
+		})
 	})
 }
