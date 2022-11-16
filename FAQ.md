@@ -21,11 +21,3 @@ The expression `{{.PackageName | snakecase}}` removes spaces from `PackageName` 
 ## Use `scafall` Behind a Proxy
 
 Export both `HTTP_PROXY` and `HTTPS_PROXY` environment variables and these will be used by `scafall`.
-
-## What is an `Override`
-
-An override is a constant value provided to the scaffolding engine via the `scafall` API.
-
-## What is `DefaultValues`
-
-A `DefaultValue` is a default prompt value provided to the scaffolding engine via the `scafall` API.
