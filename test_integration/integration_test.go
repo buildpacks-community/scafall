@@ -139,6 +139,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		it("reports template errors and does not output a project", func() {
 			brokenTemplate := "testdata/broken"
 			outputDir, _ := ioutil.TempDir("", "test")
+			defer os.RemoveAll(outputDir)
 
 			s, _ := scafall.NewScafall(brokenTemplate, scafall.WithOutputFolder(outputDir))
 			err := s.Scaffold()
@@ -147,6 +148,33 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			templateFile := filepath.Join(outputDir, "template.go")
 			_, err = os.Stat(templateFile)
 			h.AssertNotNil(t, err)
+		})
+	})
+
+	when("various sprig functions are used", func() {
+		it("parses and executes correctly", func() {
+			template := "testdata/sprig_templates"
+			outputDir, _ := ioutil.TempDir("", "test")
+			defer os.RemoveAll(outputDir)
+
+			s, _ := scafall.NewScafall(template,
+				scafall.WithOutputFolder(outputDir),
+				scafall.WithArguments(map[string]string{
+					"TestPrompt": "quack.exe",
+				}),
+			)
+			err := s.Scaffold()
+			h.AssertNil(t, err)
+
+			readmeFile := filepath.Join(outputDir, "TEMPLATES.txt")
+			contents, err := os.ReadFile(readmeFile)
+			h.AssertNil(t, err)
+			text := string(contents)
+			h.AssertContains(t, text, "* {{ .Unknown | snake_case }}")
+
+			h.AssertContains(t, text, "* HELLO!")
+			h.AssertContains(t, text, "* 1m35s")
+			h.AssertContains(t, text, "* .exe")
 		})
 	})
 }
