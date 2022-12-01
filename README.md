@@ -13,7 +13,7 @@ A project scaffolding tool inspired by [cookiecutter](https://github.com/cookiec
 
 ## Problem
 
-We needed a tool to create new source code projects from templates.  In addition, we needed the tool to be a libaray written in [Go](https://go.dev/).  Scafall takes project templates, asks the end-user some questions and produces an output folder.
+We needed a tool to create new source code projects from templates.  In addition, we needed the tool to be a library written in [Go](https://go.dev/).  Scafall takes project templates, asks the end-user some questions and produces an output folder.
 
 Scafall differs from some other Go scaffolding/templating tools as it passes through unknown template subsitutions.  For example, if your input application source or documentation contains a `{{.Foo}}` template and no argument is provided (either programmatically or by the end-user) then the output file will contain the string `{{.Foo}}`.  This allows the generation of projects where the generated source contains templates.
 
