@@ -1,7 +1,6 @@
 package internal_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,48 +19,38 @@ import (
 func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 	when("Reading a prompt file", func() {
 		it("reads a correct prompt file", func() {
-			tmpDir, _ := ioutil.TempDir("", "test")
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 			promptFile := filepath.Join(tmpDir, internal.PromptFile)
 			correctPromptFile := "[[prompt]]\nname=\"Foo\"\nprompt=\"Choose a foo\""
-			f, _ := os.Create(promptFile)
-			f.Write([]byte(correctPromptFile))
-			f.Close()
+			os.WriteFile(promptFile, []byte(correctPromptFile), 0600)
 
-			var err error
-			f, err = os.Open(promptFile)
+			f, err := os.Open(promptFile)
 			h.AssertNil(t, err)
 			template, err := internal.NewTemplate(f, nil, nil)
 			h.AssertNil(t, err)
 			h.AssertEq(t, len(template.Arguments()), 1)
 		})
 
-		var incorrectPromptFiles = []string{
-			"incorrect",
-			"[[prompt]]",
-			"[[prompt]]\nname=\"test\"",
-			"[[prompt]]\nprompt=\"test\"",
-		}
-		for _, file := range incorrectPromptFiles {
-			var incorrectPromptFile = file
-			when("Reading an incorrect prompt file", func() {
-				tmpDir, _ := ioutil.TempDir("", "test")
+		it("reads incorrect prompt files", func() {
+			var incorrectPromptFiles = []string{
+				"incorrect",
+				"[[prompt]]",
+				"[[prompt]]\nname=\"test\"",
+				"[[prompt]]\nprompt=\"test\"",
+			}
+			for _, file := range incorrectPromptFiles {
+				var incorrectPromptFile = file
+				tmpDir := t.TempDir()
 				promptFile := filepath.Join(tmpDir, internal.PromptFile)
-				it.Before(func() {
-					f, _ := os.Create(promptFile)
-					f.Write([]byte(incorrectPromptFile))
-					f.Close()
-				})
+				os.WriteFile(promptFile, []byte(incorrectPromptFile), 0600)
 
-				it("fails with an incorrect prompt file", func() {
-					f, err := os.Open(promptFile)
-					h.AssertNil(t, err)
-					template, err := internal.NewTemplate(f, nil, nil)
-					h.AssertNotNil(t, err)
-					h.AssertNil(t, template)
-				})
-			})
-		}
+				f, err := os.Open(promptFile)
+				h.AssertNil(t, err)
+				template, err := internal.NewTemplate(f, nil, nil)
+				h.AssertNotNil(t, err)
+				h.AssertNil(t, template)
+			}
+		})
 	})
 }
 
