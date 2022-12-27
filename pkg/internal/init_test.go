@@ -7,7 +7,7 @@ import (
 	"github.com/sclevine/spec/report"
 )
 
-func TestIternal(t *testing.T) {
+func TestInternal(t *testing.T) {
 	spec.Run(t, "ReadPrompt", testReadPrompt, spec.Report(report.Terminal{}))
 	spec.Run(t, "AskPrompts", testAskPrompts, spec.Report(report.Terminal{}))
 }
