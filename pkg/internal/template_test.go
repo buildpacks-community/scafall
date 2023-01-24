@@ -10,10 +10,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Netflix/go-expect"
-	h "github.com/buildpacks/pack/testhelpers"
 	pseudotty "github.com/creack/pty"
 	"github.com/hinshun/vt10x"
 	"github.com/sclevine/spec"
+	h "github.com/stretchr/testify/assert"
 )
 
 func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
@@ -25,10 +25,10 @@ func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 			os.WriteFile(promptFile, []byte(correctPromptFile), 0600)
 
 			f, err := os.Open(promptFile)
-			h.AssertNil(t, err)
+			h.Nil(t, err)
 			template, err := internal.NewTemplate(f, nil, nil)
-			h.AssertNil(t, err)
-			h.AssertEq(t, len(template.Arguments()), 1)
+			h.Nil(t, err)
+			h.Equal(t, len(template.Arguments()), 1)
 		})
 
 		it("reads incorrect prompt files", func() {
@@ -45,10 +45,10 @@ func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 				os.WriteFile(promptFile, []byte(incorrectPromptFile), 0600)
 
 				f, err := os.Open(promptFile)
-				h.AssertNil(t, err)
+				h.Nil(t, err)
 				template, err := internal.NewTemplate(f, nil, nil)
-				h.AssertNotNil(t, err)
-				h.AssertNil(t, template)
+				h.NotNil(t, err)
+				h.Nil(t, template)
 			}
 		})
 	})
@@ -121,7 +121,7 @@ func RunTest(t *testing.T, procedure func(expectConsole), test func(terminal.Std
 	if err != nil {
 		t.Error(err)
 	}
-	h.AssertEq(t, values, expected)
+	h.Equal(t, values, expected)
 
 	if err := c.Tty().Close(); err != nil {
 		t.Errorf("error closing Tty: %v", err)
