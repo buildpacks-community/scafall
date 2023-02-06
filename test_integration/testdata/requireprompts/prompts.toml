@@ -1,0 +1,4 @@
+[[prompt]]
+name = "Test"
+prompt = "Enter test value"
+required = true
