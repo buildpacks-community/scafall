@@ -38,27 +38,18 @@ func Create(inputDir string, arguments map[string]string, targetDir string) erro
 	promptFile := filepath.Join(inputDir, PromptFile)
 	var template Template
 
-	overridesFile := filepath.Join(inputDir, OverrideFile)
-	overrides := map[string]string{}
-	if _, err := os.Stat(overridesFile); err == nil {
-		overrides, err = ReadOverrides(overridesFile)
-		if err != nil {
-			return err
-		}
-	}
-
 	if _, ok := os.Stat(promptFile); ok == nil {
 		p, err := os.Open(promptFile)
 		if err != nil {
 			return err
 		}
-		template, err = NewTemplate(p, arguments, overrides)
+		template, err = NewTemplate(p, arguments)
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		template, err = NewTemplate(nil, arguments, overrides)
+		template, err = NewTemplate(nil, arguments)
 		if err != nil {
 			return err
 		}

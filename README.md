@@ -65,8 +65,6 @@ func main() {
 
 When using `scafall` programmatically you may want to provide values for template variables.  In `scafall` these are termed _arguments_.  An argument may define `map[string]string{"PI": "3.14"}` any prompting for an alternative value to `PI` is skipped and the `3.14` values is used in templates.  This is particularly useful where the calling code calculates a value, such as a username, and does not want the end-user to be prompted to chage this value.
 
-In all cases, arguments _can_ be provided in a `.override.toml` file.  The `.override.toml` file is intended to simplify testing and therefore the format is an implementation detail.  Because the format is an implementation detail, we do not document it here.
-
 ## Project Templates
 
 Project templates are normal source code projects with the addition of a `prompts.toml` file.  The `prompts.toml` file defines questions to ask of the end-user.  The answers to the questions are available as template variables.  For example, suppose we have a project template to create a new Python project, we only need to ask the end-user which python interpreter to use and how many python digits to generate:

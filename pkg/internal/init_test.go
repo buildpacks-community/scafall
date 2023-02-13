@@ -17,7 +17,6 @@ func TestIternal(t *testing.T) {
 	spec.Run(t, "Transform", testTransform, spec.Report(report.Terminal{}))
 	// transform
 	spec.Run(t, "Apply", testApply, spec.Report(report.Terminal{}))
-	spec.Run(t, "Overrides", testReadOverrides, spec.Report(report.Terminal{}))
 	// create
 	spec.Run(t, "Create", testCreate, spec.Report(report.Terminal{}))
 	// collection

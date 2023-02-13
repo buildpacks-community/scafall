@@ -17,12 +17,13 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		title         string
 		folder        []string
 		promptAnswers []string
+		arguments     map[string]string
 	}
 	testCases := []TestCase{
-		{"Test no prompt file", []string{"testdata", "empty"}, []string{}},
-		{"Test empty prompt file", []string{"testdata", "noprompts"}, []string{}},
-		{"Test string prompts", []string{"testdata", "str_prompts"}, []string{"test"}},
-		{"Test required prompts", []string{"testdata", "requireprompts"}, []string{"test"}},
+		{"Test no prompt file", []string{"testdata", "empty"}, []string{}, map[string]string{}},
+		{"Test empty prompt file", []string{"testdata", "noprompts"}, []string{}, map[string]string{}},
+		{"Test string prompts", []string{"testdata", "str_prompts"}, []string{"test"}, map[string]string{"TestPrompt": "test"}},
+		{"Test required prompts", []string{"testdata", "requireprompts"}, []string{"test"}, map[string]string{"Test": "test"}},
 	}
 
 	for _, testCase := range testCases {
@@ -46,6 +47,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				s, err := scafall.NewScafall(
 					inputTemplate,
 					scafall.WithOutputFolder(outputDir),
+					scafall.WithArguments(currentCase.arguments),
 				)
 				h.Nil(t, err)
 				err = s.Scaffold()
@@ -119,6 +121,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				"testdata/collection",
 				scafall.WithOutputFolder(outputDir),
 				scafall.WithSubPath("two"),
+				scafall.WithArguments(map[string]string{"TestPrompt": "test"}),
 			)
 			s.Scaffold()
 

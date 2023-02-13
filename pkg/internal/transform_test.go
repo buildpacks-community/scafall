@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/buildpacks/scafall/pkg/internal"
-
 	"github.com/sclevine/spec"
 	h "github.com/stretchr/testify/assert"
+
+	"github.com/buildpacks/scafall/pkg/internal"
 )
 
 func testApply(t *testing.T, when spec.G, it spec.S) {
@@ -81,36 +81,6 @@ func testApplyNoArgument(t *testing.T, when spec.G, it spec.S) {
 			c, err = internal.ReadFile(filepath.Join(outputDir, "/{{.Foo}}/{{.Foo}}/{{.Foo}}.txt"))
 			h.Nil(t, err)
 			h.Contains(t, c, "{{.Foo}}")
-		})
-	})
-}
-
-func testReadOverrides(t *testing.T, when spec.G, it spec.S) {
-	when("an overrides file is provided", func() {
-		it("parses a correct overrides file", func() {
-			tmpDir := t.TempDir()
-			overrideFile := filepath.Join(tmpDir, internal.OverrideFile)
-			content := `Foo="bar"
-Bar="baz"`
-			err := os.WriteFile(overrideFile, []byte(content), 0600)
-			h.Nil(t, err)
-
-			actual, err := internal.ReadOverrides(overrideFile)
-
-			h.Nil(t, err)
-			h.Equal(t, map[string]string{"Foo": "bar", "Bar": "baz"}, actual)
-		})
-
-		it("fails to pars an incorrect overrides file", func() {
-			tmpDir := t.TempDir()
-			overrideFile := filepath.Join(tmpDir, internal.OverrideFile)
-			err := os.WriteFile(overrideFile, []byte("Foo"), 0600)
-			h.Nil(t, err)
-
-			actual, err := internal.ReadOverrides(overrideFile)
-
-			h.NotNil(t, err)
-			h.Nil(t, actual)
 		})
 	})
 }

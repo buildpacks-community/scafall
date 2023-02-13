@@ -35,7 +35,6 @@ type TemplateImpl struct {
 	TPrompts   Prompts
 	TQuestions []*survey.Question
 	TArguments map[string]string
-	TOverrides map[string]string
 }
 
 func NewQuestion(prompt Prompt) survey.Question {
@@ -68,12 +67,9 @@ func NewQuestion(prompt Prompt) survey.Question {
 	return p
 }
 
-func NewTemplate(promptFile io.ReadCloser, arguments map[string]string, overrides map[string]string) (Template, error) {
+func NewTemplate(promptFile io.ReadCloser, arguments map[string]string) (Template, error) {
 	if arguments == nil {
 		arguments = map[string]string{}
-	}
-	if overrides == nil {
-		overrides = map[string]string{}
 	}
 	prompts := Prompts{}
 	if promptFile != nil {
@@ -94,9 +90,7 @@ func NewTemplate(promptFile io.ReadCloser, arguments map[string]string, override
 		}
 
 		// Remove question from survey if an argument has been provided
-		_, arg := arguments[prompt.Name]
-		_, ovr := overrides[prompt.Name]
-		if !arg && !ovr {
+		if _, ok := arguments[prompt.Name]; !ok {
 			question := NewQuestion(prompt)
 			questions = append(questions, &question)
 		}
@@ -106,7 +100,6 @@ func NewTemplate(promptFile io.ReadCloser, arguments map[string]string, override
 		TPrompts:   prompts,
 		TQuestions: questions,
 		TArguments: arguments,
-		TOverrides: overrides,
 	}, nil
 }
 
@@ -130,9 +123,6 @@ func (t TemplateImpl) Ask(opts ...survey.AskOpt) (map[string]string, error) {
 		answers[key] = val
 	}
 	for key, value := range t.TArguments {
-		answers[key] = value
-	}
-	for key, value := range t.TOverrides {
 		answers[key] = value
 	}
 	return answers, nil

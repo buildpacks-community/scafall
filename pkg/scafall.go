@@ -121,7 +121,7 @@ func (s Scafall) TemplateArguments() (string, []string, error) {
 		s.cleanUp()
 		return "", nil, err
 	}
-	template, err := internal.NewTemplate(p, nil, nil)
+	template, err := internal.NewTemplate(p, nil)
 	if err != nil {
 		s.cleanUp()
 		return "", nil, err
