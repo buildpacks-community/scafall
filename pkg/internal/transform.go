@@ -6,21 +6,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/BurntSushi/toml"
-	"github.com/pkg/errors"
-
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/pkg/errors"
 
 	"github.com/buildpacks/scafall/pkg/internal/util"
 )
 
 const (
-	OverrideFile         string = ".override.toml"
 	ReplacementDelimiter string = "{&{&"
 )
 
 var (
-	IgnoredNames       = []string{PromptFile, OverrideFile}
+	IgnoredNames       = []string{PromptFile}
 	IgnoredDirectories = []string{".git", "node_modules"}
 )
 
@@ -30,25 +27,6 @@ func ReadFile(path string) (string, error) {
 		return "", fmt.Errorf("cannot read file %s", path)
 	}
 	return string(buf), nil
-}
-
-func ReadOverrides(overrideFile string) (map[string]string, error) {
-	var overrides map[string]string
-	// if no override file
-	if _, err := os.Stat(overrideFile); err != nil {
-		return nil, nil
-	}
-
-	overrideData, err := ReadFile(overrideFile)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := toml.Decode(overrideData, &overrides); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%s file does not match required format", overrideFile))
-	}
-
-	return overrides, nil
 }
 
 func Apply(inputDir string, vars map[string]string, outputDir string) error {

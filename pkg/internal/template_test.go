@@ -26,7 +26,7 @@ func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 
 			f, err := os.Open(promptFile)
 			h.Nil(t, err)
-			template, err := internal.NewTemplate(f, nil, nil)
+			template, err := internal.NewTemplate(f, nil)
 			h.Nil(t, err)
 			h.Equal(t, len(template.Arguments()), 1)
 		})
@@ -46,7 +46,7 @@ func testReadPrompt(t *testing.T, when spec.G, it spec.S) {
 
 				f, err := os.Open(promptFile)
 				h.Nil(t, err)
-				template, err := internal.NewTemplate(f, nil, nil)
+				template, err := internal.NewTemplate(f, nil)
 				h.NotNil(t, err)
 				h.Nil(t, template)
 			}

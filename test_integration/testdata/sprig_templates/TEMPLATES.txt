@@ -1,0 +1,12 @@
+# Sprig Examples
+
+The following Sprig examples should be unchanged in the output README.md
+
+* {{ .Unknown | snake_case }}
+
+The following Sprig examples should expand to their computed values
+
+* {{ "hello!" | upper }}
+* {{ duration "95" }}
+* {{ ext "foo.bar" }}
+* {{ .TestPrompt | ext }}
