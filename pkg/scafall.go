@@ -83,17 +83,13 @@ func (s Scafall) Scaffold() error {
 			Message: "choose a project template",
 			Options: options,
 		}
-		response := struct {
-			Template string
-		}{
-			Template: "",
-		}
-		err := survey.AskOne(&question, response, survey.WithValidator(survey.Required))
+		template := ""
+		err := survey.AskOne(&question, &template, survey.WithValidator(survey.Required))
 		if err != nil {
 			s.cleanUp()
 			return err
 		}
-		inFs = path.Join(s.CloneCache, response.Template)
+		inFs = path.Join(s.CloneCache, template)
 	}
 
 	err = internal.Create(inFs, s.Arguments, s.OutputFolder)

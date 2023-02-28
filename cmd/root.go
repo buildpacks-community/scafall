@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	scafall "github.com/buildpacks/scafall/pkg"
 )
 
 const (
@@ -17,8 +19,26 @@ var (
 		Long:  `Scafall creates new project from project templates.`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			url := args[0]
 
-			return nil
+			s, err := scafall.NewScafall(url)
+			if err != nil {
+				return err
+			}
+			outputDirVal, err := cmd.Flags().GetString(outputFolderFlag)
+			if err == nil {
+				scafall.WithOutputFolder(outputDirVal)(&s)
+			}
+			argumentsVal, err := cmd.Flags().GetStringToString(argumentsFlag)
+			if err == nil {
+				scafall.WithArguments(argumentsVal)(&s)
+			}
+			subPathVal, err := cmd.Flags().GetString(subPath)
+			if err == nil {
+				scafall.WithSubPath(subPathVal)(&s)
+			}
+
+			return s.Scaffold()
 		},
 	}
 )
