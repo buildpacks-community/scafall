@@ -8,7 +8,7 @@ import (
 	"github.com/sclevine/spec"
 	h "github.com/stretchr/testify/assert"
 
-	"github.com/buildpacks/scafall/pkg/internal"
+	"github.com/buildpacks-community/scafall/pkg/internal"
 )
 
 func testApply(t *testing.T, when spec.G, it spec.S) {

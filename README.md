@@ -1,12 +1,12 @@
 # scafall
 
-[![Build results](https://github.com/buildpacks/scafall/workflows/build/badge.svg)](https://github.com/buildpacks/scafall/actions)
-[![Go Report Card](https://goreportcard.com/badge/github.com/buildpacks/scafall)](https://goreportcard.com/report/github.com/buildpacks/scafall)
-[![codecov](https://codecov.io/gh/buildpacks/scafall/branch/main/graph/badge.svg)](https://codecov.io/gh/buildpacks/scafall)
-[![GoDoc](https://godoc.org/github.com/buildpacks/scafall?status.svg)](https://godoc.org/github.com/buildpacks/scafall)
-[![GitHub license](https://img.shields.io/github/license/buildpacks/scafall)](https://github.com/buildpacks/scafall/blob/main/LICENSE)
+[![Build results](https://github.com/buildpacks-community/scafall/workflows/build/badge.svg)](https://github.com/buildpacks-community/scafall/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/buildpacks-community/scafall)](https://goreportcard.com/report/github.com/buildpacks-community/scafall)
+[![codecov](https://codecov.io/gh/buildpacks-community/scafall/branch/main/graph/badge.svg)](https://codecov.io/gh/buildpacks-community/scafall)
+[![GoDoc](https://godoc.org/github.com/buildpacks-community/scafall?status.svg)](https://godoc.org/github.com/buildpacks-community/scafall)
+[![GitHub license](https://img.shields.io/github/license/buildpacks-community/scafall)](https://github.com/buildpacks-community/scafall/blob/main/LICENSE)
 [![Slack](https://img.shields.io/badge/slack-join-ff69b4.svg?logo=slack)](https://slack.cncf.io/)
-[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/buildpacks/scafall)
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/buildpacks-community/scafall)
 
 
 A project scaffolding tool inspired by [cookiecutter](https://github.com/cookiecutter/cookiecutter).
@@ -22,7 +22,7 @@ Scafall differs from some other Go scaffolding/templating tools as it passes thr
 As a Go developer you can install `scafall` into your `GOBIN` directory.
 
 ```bash
-$ go install github.com/buildpacks/scafall@latest
+$ go install github.com/buildpacks-community/scafall@latest
 ```
 
 The `scafall` CLI should now be available for use
@@ -49,7 +49,7 @@ package main
 import (
   "fmt"
 
-  scafall "github.com/buildpacks/scafall/pkg"
+  scafall "github.com/buildpacks-community/scafall/pkg"
 )
 
 func main() {

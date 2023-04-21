@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/buildpacks/scafall/pkg/internal"
+	"github.com/buildpacks-community/scafall/pkg/internal"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"

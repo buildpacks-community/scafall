@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/buildpacks/scafall/pkg/internal"
+	"github.com/buildpacks-community/scafall/pkg/internal"
 
 	"github.com/AlecAivazis/survey/v2"
 )

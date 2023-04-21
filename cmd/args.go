@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	scafall "github.com/buildpacks/scafall/pkg"
+	scafall "github.com/buildpacks-community/scafall/pkg"
 )
 
 var (

@@ -1,4 +1,4 @@
-module github.com/buildpacks/scafall
+module github.com/buildpacks-community/scafall
 
 go 1.20
 
