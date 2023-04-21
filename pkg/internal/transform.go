@@ -9,7 +9,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/pkg/errors"
 
-	"github.com/buildpacks/scafall/pkg/internal/util"
+	"github.com/buildpacks-community/scafall/pkg/internal/util"
 )
 
 const (

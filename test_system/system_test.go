@@ -12,7 +12,7 @@ import (
 	"github.com/sclevine/spec"
 	h "github.com/stretchr/testify/assert"
 
-	scafall "github.com/buildpacks/scafall/pkg"
+	scafall "github.com/buildpacks-community/scafall/pkg"
 )
 
 // walk recursively descends path, calling walkFn
