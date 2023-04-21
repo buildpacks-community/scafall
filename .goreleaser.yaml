@@ -2,10 +2,9 @@ project_name: scafall
 
 builds:
   -
-    # If true, skip the build.
-    # Useful for library projects.
-    # Default is false
-    skip: true
+    goarch:
+      - amd64
+      - arm64
 
 changelog:
   # Set it to true if you wish to skip the changelog generation.
