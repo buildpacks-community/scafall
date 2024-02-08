@@ -48,7 +48,8 @@ func WithSubPath(subPath string) Option {
 	}
 }
 
-// Create a new Scafall with the given options.
+// Create a new Scafall with the given options.  The input url can either point
+// to a project template or a collection of project templates.
 func NewScafall(url string, opts ...Option) (Scafall, error) {
 	var (
 		defaultArguments    = map[string]string{}
@@ -68,9 +69,7 @@ func NewScafall(url string, opts ...Option) (Scafall, error) {
 	return s, nil
 }
 
-// Scaffold accepts url containing project templates and creates an output
-// project.  The url can either point to a project template or a collection of
-// project templates.
+// Scaffold creates an output project.
 func (s Scafall) Scaffold() error {
 	err := s.clone()
 	if err != nil {

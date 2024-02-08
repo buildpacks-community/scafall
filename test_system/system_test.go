@@ -10,7 +10,7 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sclevine/spec"
-	h "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	scafall "github.com/buildpacks-community/scafall/pkg"
 )
@@ -99,14 +99,14 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 
 			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir))
 			err := s.Scaffold()
-			h.Nil(t, err)
+			require.Nil(t, err)
 
 			bfs := osfs.New(outputDir)
 			walkFs(expected, "/", func(path string, info fs.FileInfo, err error) error {
 				fi, e := bfs.Stat(path)
-				h.Nil(t, e)
+				require.Nil(t, e)
 
-				h.Equal(t, fi.Mode()&01000, info.Mode()&01000)
+				require.Equal(t, fi.Mode()&01000, info.Mode()&01000)
 				return nil
 			})
 		})
@@ -139,14 +139,14 @@ func testSystem(t *testing.T, when spec.G, it spec.S) {
 
 			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir), scafall.WithArguments(arguments))
 			err := s.Scaffold()
-			h.Nil(t, err)
+			require.Nil(t, err)
 
 			bfs := osfs.New(outputDir)
 			walkFs(expected, "/", func(path string, info fs.FileInfo, err error) error {
 				fi, e := bfs.Stat(path)
-				h.Nil(t, e)
+				require.Nil(t, e)
 
-				h.Equal(t, fi.Mode()&01000, info.Mode()&01000)
+				require.Equal(t, fi.Mode()&01000, info.Mode()&01000)
 				return nil
 			})
 		})
@@ -172,9 +172,9 @@ func testArgs(t *testing.T, when spec.G, it spec.S) {
 
 			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir))
 			_, args, err := s.TemplateArguments()
-			h.Nil(t, err)
+			require.Nil(t, err)
 
-			h.Equal(t, args, []string{
+			require.Equal(t, args, []string{
 				"ProjectName (default: pyexample)",
 				"PythonVersion=python3.10, python3.9, python3.8 (default: python3.10)",
 				"NumDigits (default: 3)",
@@ -186,9 +186,9 @@ func testArgs(t *testing.T, when spec.G, it spec.S) {
 
 			s, _ := scafall.NewScafall(url, scafall.WithOutputFolder(outputDir))
 			_, args, err := s.TemplateArguments()
-			h.Nil(t, err)
+			require.Nil(t, err)
 
-			h.Equal(t, args, []string{"Go", "bash"})
+			require.Equal(t, args, []string{"Go", "bash"})
 		})
 
 		it.After(func() {

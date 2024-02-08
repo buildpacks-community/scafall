@@ -7,7 +7,7 @@ import (
 
 	"github.com/buildpacks-community/scafall/pkg/internal"
 	"github.com/sclevine/spec"
-	h "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testCollection(t *testing.T, when spec.G, it spec.S) {
@@ -29,7 +29,7 @@ func testCollection(t *testing.T, when spec.G, it spec.S) {
 			)
 			it.Before(func() {
 				tmpDir, err := os.MkdirTemp("", "scafall")
-				h.Nil(t, err)
+				require.Nil(t, err)
 				collectionDir = &tmpDir
 				for _, folder := range testCase.folders {
 					d := filepath.Join(*collectionDir, folder)
@@ -46,8 +46,8 @@ func testCollection(t *testing.T, when spec.G, it spec.S) {
 			})
 			it("detects a collection", func() {
 				collection, options := internal.IsCollection(*collectionDir)
-				h.True(t, collection)
-				h.Equal(t, options, testCase.templates)
+				require.True(t, collection)
+				require.Equal(t, options, testCase.templates)
 			})
 		})
 	}
